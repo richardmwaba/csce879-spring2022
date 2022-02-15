@@ -5,7 +5,7 @@ from tensorflow.keras.models import Sequential
 
 
 ## Create model
-def create_model(filters: int, kernel: int, strides: int, network_arch: dict, classes: int) -> Sequential:
+def create_model(filters: int, kernel: int, strides: int, network_arch: dict, classes: int, **kwargs) -> Sequential:
     """Create network model
 
     Arguments:
@@ -32,8 +32,11 @@ def create_model(filters: int, kernel: int, strides: int, network_arch: dict, cl
            current_filter = new_filters
            net_architecture += layers
 
-       if val == 'residual':
-           net_architecture += utils.residual_block(filters=current_filter, strides=strides, resnum=network_arch[val])
+       if val == 'residual' and 'x' in kwargs:
+           net_architecture += utils.residual_block(filters=current_filter, strides=strides, resnum=network_arch[val], 
+                                initial_x=kwargs['x'])
+       else:
+           continue
           
        if val == 'dense':
            if val == net_track[-1]:
