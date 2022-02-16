@@ -20,7 +20,7 @@ if len(sys.argv) < 2:
 # Set configurations
 run_name = sys.argv[1]
 input_dim = [32, 32, 3]
-model_names = ['simple_cnn', 'cnn_net_2']
+model_names = ['simple_cnn', 'cnn_net_2', 'cnn_net_3']
 epochs = [10, 50, 100]
 batch_size = 64
 loss_function = 'sparse_categorical_crossentropy'
@@ -50,7 +50,7 @@ training_histories = {}
 for model_name in model_names:
     for optimizer in optimizers:
         for epoch in epochs:
-            model = eval(model_name)(input_dim, nclass)
+            model = eval(model_name)(input_dim, nclass, input_x=images_train)
             model.compile(loss = loss_function, optimizer = optimizer, metrics=['accuracy'])
 
             # Model Training

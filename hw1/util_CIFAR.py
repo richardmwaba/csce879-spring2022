@@ -69,7 +69,7 @@ def show_train_history(train_history, train, validation):
     plt.legend(['train', 'validation'], loc='upper left')
     plt.show()
 
-class ResBlock(tf.Module):
+class ResBlock(tf.keras.layers.Layer):
 
     def __init__(self, filter_num, stride=1):
         super().__init__()
