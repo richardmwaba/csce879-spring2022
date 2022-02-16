@@ -1,57 +1,100 @@
-### Model imports 
-import util_CIFAR as utils
+import tensorflow as tf
+from keras.models import Sequential
+from util_CIFAR import *
+from keras.layers import Conv2D, Flatten, MaxPooling2D, Dropout, Dense, BatchNormalization, Lambda
+from keras.regularizers import L1, L2, L1L2
 
-from tensorflow.keras.models import Sequential
 
-
-## Create model
-def create_model(filters: int, kernel: int, strides: int, network_arch: dict, classes: int) -> Sequential:
-    """Create network model
-
-    Arguments:
-        filters {int} -- number of filters
-        kernel {int} -- size of kernel
-        strides {int} -- size of strides
-        network_arch {dict} -- network architecture as key, value pair
-        classes {int} -- number of target classes
-
-    Returns:
-        Sequential -- network model
-    """
-
-    net_track = [x for x in network_arch]
-    # Network architecture
-    net_architecture = []
-    # Current filter
-    current_filter = filters
-
-    for val in net_track:
-       if val == 'convolutional':
-           layers, new_filters = utils.convolutional_layers(filters=current_filter, kernel=kernel, strides=strides,
-                                    num=network_arch[val], mult_filter=True)
-           current_filter = new_filters
-           net_architecture += layers
-
-       if val == 'residual':
-           net_architecture += utils.residual_block(filters=current_filter, strides=strides, resnum=network_arch[val])
-          
-       if val == 'dense':
-           if val == net_track[-1]:
-               net_architecture += utils.dense_layer(units=classes, dense_num=network_arch[val], activation='softmax')
-           else:
-               net_architecture += utils.dense_layer(units=100, dense_num=net_architecture[val], activation='relu')
-
-       if val == 'normalization':
-           net_architecture.append(utils.batch_normalization())
-
-       if val == 'pooling':
-           net_architecture.append(utils.pooling_layer())
-
-       if val == 'flatten':
-           net_architecture.append(utils.flatten())
-
-    model = Sequential(net_architecture)
+def simple_cnn(input_shape, nclass, **kwargs):
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Flatten())
+    model.add(Dense(256, activation='relu'))
+    model.add(Dense(128, activation='relu'))
+    model.add(Dense(nclass, activation='softmax'))
 
     return model
+
+def cnn_net_2(input_shape, nclass, **kwargs):
+    
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(64, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(padding='same'))
+    model.add(MaxPooling2D(padding='same'))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(MaxPooling2D(padding='same'))
+    model.add(Conv2D(256, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Flatten())
+    model.add(Dense(200, activation='relu', kernel_regularizer=L2()))
+    model.add(Dropout(0.5))
+    model.add(Dropout(0.5))
+    model.add(Dense(nclass, activation='softmax'))
+
+    return model
+
+def cnn_net_3(input_shape, nclass, **kwargs):
+    
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(64, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(padding='same'))
+    model.add(MaxPooling2D(padding='same'))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(MaxPooling2D(padding='same'))
+    model.add(Conv2D(256, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(256, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(256, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(512, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(512, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(Flatten())
+    model.add(Dense(200, activation='relu', kernel_regularizer=L2()))
+    model.add(Dropout(0.5))
+    model.add(Dropout(0.5))
+    model.add(Dense(nclass, activation='softmax'))
+
+    return model
+
+def res_net(input_shape, nclass, **kwargs):
+    architec = []
+    filt = 32
+
+    conv_1 = Conv2D(filters=filt, kernel_size=(3, 3), activation='relu', input_shape=input_shape)
+    architec.append(conv_1)
+    bn_1 = BatchNormalization()
+    architec.append(bn_1)
+
+    if 'input_x' in kwargs:
+        x = kwargs['input_x']
+        filt *= 2
+
+        num_blocks_list = [2, 3, 1]
+
+        for i in range(len(num_blocks_list)):
+            num_blocks = num_blocks_list[i]
+            for j in range(num_blocks):
+                layer = ResBlock(filter_num=filt, stride=2)(x=x, is_training=True)
+                architec.append(layer)
+            filt *= 2
+            
+    architec.append(MaxPooling2D(pool_size=(4, 4)))
+    architec.append(Flatten())
+    architec.append(Dense(nclass, activation='softmax'))
+    
+    model = Sequential(architec)
+
+    return model
+
 
 
