@@ -20,11 +20,11 @@ if len(sys.argv) < 2:
 # Set configurations
 run_name = sys.argv[1]
 input_dim = [32, 32, 3]
-model_name = 'res_net'
-epochs = 10
+model_names = ['simple_cnn', 'cnn_net_2']
+epochs = [10, 50, 100]
 batch_size = 64
 loss_function = 'sparse_categorical_crossentropy'
-optimizer = tf.keras.optimizers.Adam()
+optimizers = [tf.keras.optimizers.Adam(), tf.keras.optimizers.Adam(learning_rate=0.0001)]
 nclass = 100
 DATA_DIR = './tensorflow-datasets/'
 
@@ -43,25 +43,43 @@ images_valid = np.array(images_valid).astype('float32') / 255
 labels_train = np.array(labels_train)
 labels_valid = np.array(labels_valid)
 
-# Model Init
-model = eval(model_name)(input_dim, nclass)
-model.compile(loss = loss_function, optimizer = optimizer, metrics=['accuracy'])
+# Model Initialization and training
+trained_models = {}
+training_histories = {}
 
-# Model Training
-history = model.fit(
-    images_train, labels_train,
-    batch_size=batch_size,
-    epochs=epochs,
-    verbose=1,
-    validation_data=(images_valid, labels_valid),
-    callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
-)
+for model_name in model_names:
+    for optimizer in optimizers:
+        for epoch in epochs:
+            model = eval(model_name)(input_dim, nclass)
+            model.compile(loss = loss_function, optimizer = optimizer, metrics=['accuracy'])
 
-# Save model
-model.save_weights(os.path.join(model_path, 'weights.h5'))
+            # Model Training
+            history = model.fit(
+                images_train, labels_train,
+                batch_size=batch_size,
+                epochs=epoch,
+                verbose=1,
+                validation_data=(images_valid, labels_valid),
+                callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
+            )
+
+        # Add last accuracy to final accuracies dictionary    
+        final_acc = history.history['val_accuracy'][-1]
+        
+        # Add model to trained models dictionary
+        trained_models[final_acc] = model
+        # Add history to trained histories dictionary
+        training_histories[final_acc] = history
+
+# Get model with maximum validation accuracy
+best_model = trained_models[max(trained_models)]
+
+# Save best model
+best_model.save_weights(os.path.join(model_path, 'weights.h5'))
+
 
 # Plot the performance results and save
-fig_acc = show_train_history(history, 'accuracy', 'val_accuracy')
+fig_acc = show_train_history(training_histories[max(trained_models)], 'accuracy', 'val_accuracy')
 plt.savefig(os.path.join(result_path, 'acc_plot.png'))
 fig_los = show_train_history(history, 'loss', 'val_loss')
 plt.savefig(os.path.join(result_path, 'loss_plot.png'))

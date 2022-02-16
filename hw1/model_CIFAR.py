@@ -2,6 +2,7 @@ import tensorflow as tf
 from keras.models import Sequential
 from util_CIFAR import *
 from keras.layers import Conv2D, Flatten, MaxPooling2D, Dropout, Dense, BatchNormalization, Lambda
+from keras.regularizers import L1, L2, L1L2
 
 
 def simple_cnn(input_shape, nclass):
@@ -19,7 +20,7 @@ def simple_cnn(input_shape, nclass):
 
     return model
 
-def res_net(input_shape, nclass):
+def cnn_net_2(input_shape, nclass):
     
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
@@ -31,8 +32,9 @@ def res_net(input_shape, nclass):
     model.add(MaxPooling2D(padding='same'))
     model.add(Conv2D(256, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
     model.add(Flatten())
-    model.add(Dense(200, activation='relu'))
-    model.add(Dense(200, activation='relu'))
+    model.add(Dense(200, activation='relu', kernel_regularizer=L2()))
+    model.add(Dropout(0.5))
+    model.add(Dropout(0.5))
     model.add(Dense(nclass, activation='softmax'))
 
     return model
