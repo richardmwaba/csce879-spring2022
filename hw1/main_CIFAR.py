@@ -6,7 +6,7 @@ import os
 import glob
 import sys
 
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping
 from tqdm import tqdm
 from model_CIFAR import *
 from util_CIFAR import *
@@ -55,13 +55,6 @@ for i in range(len(config_pathlist)):
     model = eval(model_name)(input_dim, nclass, input_x=images_train)
     model.compile(loss = loss_function, optimizer = optimizer, metrics=['accuracy'])
 
-    # only keep the model that has achieved the best val_accuracy so far
-    model_checkpoint_callback = ModelCheckpoint(filepath=model_path,
-                                                save_weights_only=True,
-                                                monitor='val_accuracy',
-                                                mode='max',
-                                                save_best_only=True)
-
     # Model Training
     print("----------------------------------")
     print("Train using model '{}'".format(model_name))
@@ -71,8 +64,7 @@ for i in range(len(config_pathlist)):
         epochs=epoch,
         verbose=1,
         validation_data=(images_valid, labels_valid),
-        callbacks= [EarlyStopping(monitor='val_accuracy', patience=5),
-                   model_checkpoint_callback]
+        callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
     )
     print("Training done!")
 
