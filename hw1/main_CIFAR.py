@@ -9,6 +9,7 @@ import sys
 from keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam, Adamax, SGD
 from tqdm import tqdm
+from scipy import stats
 from model_CIFAR import *
 from util_CIFAR import *
 
@@ -42,11 +43,13 @@ training_histories = {}
 
 
 # Load data and normalize (from [0,255] to [0,1])
-images_train, labels_train, images_valid, labels_valid = load_data('cifar100', DATA_DIR, partition_split)
+images_train, labels_train, images_valid, labels_valid, images_test, labels_test = load_data('cifar100', DATA_DIR, partition_split)
 images_train = np.array(images_train).astype('float32') / 255
 images_valid = np.array(images_valid).astype('float32') / 255
 labels_train = np.array(labels_train)
 labels_valid = np.array(labels_valid)
+images_test = np.array(images_test)
+labels_test = np.array(labels_test)
 
 
 for model_name in model_names:
@@ -84,8 +87,14 @@ best_model = trained_models[max(trained_models)]
 # Save best model
 best_model[0].save_weights(os.path.join(model_path, "{}_weights.h5".fomat(best_model[1])))
 
+# Run best model on test data
+final_predictions = best_model.predict(images_test)
+
+# Calculate confidence interval
+
+
 # Plot confusion matrix
-confusion_matrix_fig = show_confusion_mat(model=best_model[0], x_valid=images_valid, y_valid=labels_valid,class_names=range(nclass))
+confusion_matrix_fig = show_confusion_mat(model=best_model[0], x_valid=images_test, y_valid=labels_test,class_names=range(nclass))
 plt.savefig(os.path.join(result_path, 'confusion_matrix.png'))
 
 # Plot the performance results and save

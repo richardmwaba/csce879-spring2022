@@ -2,8 +2,6 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
 import matplotlib.pyplot as plt
-import ruamel.yaml
-import hashlib
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
@@ -23,11 +21,16 @@ def load_data(dataset, DATA_DIR, partition_split=[90,10]):
     valid_ds = tfds.load(dataset,
                          split='train[-{0}%:]'.format(partition_split[1]),
                          data_dir=DATA_DIR)
+
+    test_ds = tfds.load(dataset,
+                         split='test',
+                         data_dir=DATA_DIR)
+                         
     
-    return data2numpy(train_ds, valid_ds)
+    return data2numpy(train_ds, valid_ds, test_ds)
 
 
-def data2numpy(train_ds, valid_ds):
+def data2numpy(train_ds, valid_ds, test_ds):
     """_summary_
     Arguments:
         train_ds {_type_} -- _description_
@@ -37,6 +40,7 @@ def data2numpy(train_ds, valid_ds):
     """
     images_train, labels_train = [], []
     images_valid, labels_valid = [], []
+    images_test, labels_test = [], []
     
     for ins in train_ds:
         labels_train.append(ins['label'].numpy())
@@ -45,9 +49,13 @@ def data2numpy(train_ds, valid_ds):
     for ins in valid_ds:
         labels_valid.append(ins['label'].numpy())
         images_valid.append(ins['image'].numpy())
+
+    for ins in test_ds:
+        labels_test.append(ins['label'].numpy())
+        images_test.append(ins['image'].numpy())
         
     # lists of images and labels
-    return images_train, labels_train, images_valid, labels_valid
+    return images_train, labels_train, images_valid, labels_valid, images_test, labels_test
 
 
 def show_train_history(train_history, train, validation):
