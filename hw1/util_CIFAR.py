@@ -2,18 +2,18 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
 import matplotlib.pyplot as plt
+import ruamel.yaml
+import hashlib
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
 def load_data(dataset, DATA_DIR, partition_split=[90,10]):
     """_summary_
-
     Arguments:
         dataset {_type_} -- _description_
         DATA_DIR {_type_} -- _description_
-
     Keyword Arguments:
         partition_split {list} -- _description_ (default: {[90,10]})
-
     Returns:
         _type_ -- _description_
     """
@@ -29,11 +29,9 @@ def load_data(dataset, DATA_DIR, partition_split=[90,10]):
 
 def data2numpy(train_ds, valid_ds):
     """_summary_
-
     Arguments:
         train_ds {_type_} -- _description_
         valid_ds {_type_} -- _description_
-
     Returns:
         _type_ -- _description_
     """
@@ -54,7 +52,6 @@ def data2numpy(train_ds, valid_ds):
 
 def show_train_history(train_history, train, validation):
     """_summary_
-
     Arguments:
         train_history {_type_} -- _description_
         train {_type_} -- _description_
@@ -68,7 +65,28 @@ def show_train_history(train_history, train, validation):
     plt.xlabel('Epoch')
     plt.legend(['train', 'validation'], loc='upper left')
     plt.show()
+    
 
+def show_confusion_mat(model, x_valid, y_valid, class_names):
+    """Draw confusion matrix
+    Argument:
+        model: trained model
+        x_valid: np array of validation data
+        y_valid: np array of validation label
+        class_names: range(nclass) array
+    Returns:
+        plt figure
+    """
+    props = model.predict(x_valid)
+    y_pred = np.argmax(props,axis=1)  # convert hot vectors to predicted labels in [0, 99]
+    cm = confusion_matrix(y_valid, y_pred, normalize='true')
+    cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
+    plt.figure()
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    disp.plot(cmap=plt.cm.Blues)
+    plt.show()
+
+######################################################################
 class ResBlock(tf.keras.layers.Layer):
 
     def __init__(self, filter_num, stride=1):

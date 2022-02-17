@@ -61,7 +61,6 @@ def cnn_net_3(input_shape, nclass, **kwargs):
     model.add(Flatten())
     model.add(Dense(200, activation='relu', kernel_regularizer=L2()))
     model.add(Dropout(0.5))
-    model.add(Dropout(0.5))
     model.add(Dense(nclass, activation='softmax'))
 
     return model
