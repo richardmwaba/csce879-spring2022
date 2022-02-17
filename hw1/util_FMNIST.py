@@ -1,18 +1,19 @@
 import tensorflow as tf
-from keras.models import Sequential
-from util_MNIST import *
-from keras.layers import Dense
+import tensorflow_datasets as tfds
+import numpy as np
+import matplotlib.pyplot as plt
+DATA_DIR = './tensorflow-datasets/'
 
-def model1 ():
-    model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Dense(64, tf.nn.relu))
-    model.add(tf.keras.layers.Dense(128, tf.nn.relu,))
-    model.add(tf.keras.layers.Dense(
-            256, tf.nn.relu,
-            kernel_regularizer=tf.keras.regularizers.L1(0.01),
-            activity_regularizer=tf.keras.regularizers.L2(0.01)))
-    model.add(tf.keras.layers.Dense(10, tf.nn.softmax))
-    optimizer = tf.keras.optimizers.Adam()
+def load_train(dataset):
+
+    train = tfds.load(dataset, split='train[:90%]', data_dir=DATA_DIR)
+    train_ds = train.shuffle(1024).batch(32)
     
-    return model, optimizer
+    return train_ds
 
+def load_valid(dataset):
+    
+    validation = tfds.load(dataset, split='train[-10%:]', data_dir=DATA_DIR)
+    validation_ds = validation.shuffle(1024).batch(32)
+    
+    return validation_ds
