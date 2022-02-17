@@ -2,6 +2,8 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
 import matplotlib.pyplot as plt
+import ruamel.yaml
+import hashlib
 
 
 def load_data(dataset, DATA_DIR, partition_split=[90,10]):
@@ -68,6 +70,30 @@ def show_train_history(train_history, train, validation):
     plt.xlabel('Epoch')
     plt.legend(['train', 'validation'], loc='upper left')
     plt.show()
+    
+
+##################### load config from yml file ######################
+def load_config(path):
+    """load YAML config
+
+    Argument:
+        path: path to config.
+
+    Returns:
+        config: dict
+
+    """
+    with open(path, 'r', encoding='utf-8') as f:
+        config = ruamel.yaml.safe_load(f)
+    
+    s = hashlib.sha1()
+    s.update(str(config).encode('utf-8'))
+    config['config_sha1'] = s.hexdigest()[:5]
+
+    return config
+
+######################################################################
+
 
 class ResBlock(tf.keras.layers.Layer):
 

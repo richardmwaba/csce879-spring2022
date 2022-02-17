@@ -1,0 +1,19 @@
+model:  
+    name: 'simple_cnn'
+
+optimizer:
+    name: 'Adam'  # options: 'SGD', 'RMSprop', 'Adagrad', 'Nadam', 'Adamax'
+    lr: +1e-3  # doesn't matter for now, as Adam is lr adaptive
+
+loss:
+    name: 'sparse_categorical_crossentropy'
+
+train:
+    epochs: 100  # doesn't matter much if using early stopping
+    batch_size: 32
+
+dataset:
+    directory: './tensorflow-datasets/'
+    input_dim: [32, 32, 3]  # height x width x channels
+    nclass: 100
+    data_split: [80, 20]  # [train, validation]
