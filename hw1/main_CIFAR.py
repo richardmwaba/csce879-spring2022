@@ -16,9 +16,9 @@ from util_CIFAR import *
 
 
 # Set configurations
-run_name = 'output'
+run_name = 'cifar_100_output'
 input_dim = [32, 32, 3]
-model_names = ['simple_cnn', 'cnn_net_2', 'cnn_net_3']
+model_names = ['simple_cnn', 'cnn_net_2', 'cnn_net_3', 'cnn_net_4']
 epochs = 100
 batch_sizes = [32, 64]
 loss_function = 'sparse_categorical_crossentropy'
@@ -69,28 +69,33 @@ for model_name in model_names:
                 validation_data=(images_valid, labels_valid),
                 callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
             )
-            print("Training done!")
 
-        # Add last accuracy to final accuracies dictionary    
-        final_acc = history.history['val_accuracy'][-1]
-        
-        # Add model to trained models dictionary
-        model_desc= "{}_{}_{}".format(model_name, optimizer, batch_size)
-        trained_models[final_acc] = [model, model_desc]
-        # Add history to trained histories dictionary
-        training_histories[final_acc] = history
+            # Add last accuracy to final accuracies dictionary    
+            final_acc = history.history['val_accuracy'][-1]
+
+            # Add model to trained models dictionary
+            model_desc= "{}_{}_{}".format(model_name, optimizer, batch_size)
+            trained_models[final_acc] = [model, model_desc]
+            # Add history to trained histories dictionary
+            training_histories[final_acc] = history
+
+            print("Training done!")
 
 # Get model with maximum validation accuracy
 best_model = trained_models[max(trained_models)]
 
+# Write or trained models to file
+trained_models_fh = os.path.join(result_path, 'trained_models.txt')
+with open(trained_models_fh, 'w') as outfile:
+    for key, val in trained_models.items():
+        outfile.write("{}\t\t\t\t{}\n".format(val[1], key))
+
 
 # Save best model
-best_model[0].save_weights(os.path.join(model_path, "{}_weights.h5".fomat(best_model[1])))
+best_model[0].save_weights(os.path.join(model_path, "{}_weights.h5".format(best_model[1])))
 
-# Run best model on test data
-final_predictions = best_model.predict(images_test)
-
-# Calculate confidence interval
+# Evaluate model on test data
+final_score = best_model[0].evaluate(images_test, labels_test)
 
 
 # Plot confusion matrix
@@ -102,4 +107,13 @@ fig_acc = show_train_history(training_histories[max(trained_models)], 'accuracy'
 plt.savefig(os.path.join(result_path, 'acc_plot.png'))
 fig_los = show_train_history(history, 'loss', 'val_loss')
 plt.savefig(os.path.join(result_path, 'loss_plot.png'))
+
+# Calculate confidence interval
+z = 1.96
+test_acc = final_score[1]
+class_error = 1 - test_acc
+
+confidence_interval = z * tf.math.sqrt((class_error * (1 - class_error)) / labels_test.shape[0])
+print("------------------------------------------------------------------\n")
+print("The 95% confidence interval is {}".format(confidence_interval))
 

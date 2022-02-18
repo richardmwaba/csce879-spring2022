@@ -131,3 +131,4 @@ model/
 result/
 tensorflow-datasets/
 crane_result/
+test.*
