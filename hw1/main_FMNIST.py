@@ -1,77 +1,48 @@
+from __future__ import print_function
 import tensorflow as tf
 import numpy as np
+from cmath import inf
+from gc import callbacks
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from keras.callbacks import EarlyStopping
 from model_MNIST import *
 from util_MNIST import *
 import os
 
-train_ds = load_train('fashion_mnist')
-validation_ds = load_valid('fashion_mnist')
-model, optimizer = model1()
-
-train_loss_values = []
-valid_loss_values = []
-train_loss_values_plot = []
-valid_loss_values_plot = []
-train_accuracy_plot = []
-valid_accuracy_plot = []
-train_accuracy_values = []
-valid_accuracy_values = []
-test_true = np.array([])
-test_pred = np.array([])
-
-for epoch in range(4):
-    for batch in tqdm(train_ds):
-        with tf.GradientTape() as tape:
-            # run network
-            x = tf.reshape(tf.cast(batch['image'], tf.float32), [-1, 784])/255
-            labels = batch['label']
-            logits = model(x)
-
-            # calculate loss
-            train_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)    
-        train_loss_values.append(train_loss)
-    
-        # gradient update
-        grads = tape.gradient(train_loss, model.trainable_variables)
-        optimizer.apply_gradients(zip(grads, model.trainable_variables))
-    
-        # calculate accuracy
-        predictions = tf.argmax(logits, axis=1)
-        train_accuracy = tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32))
-        train_accuracy_values.append(train_accuracy)
-        
-        
-    for batch in tqdm(validation_ds):
-        x = tf.reshape(tf.cast(batch['image'], tf.float32), [-1, 784])/255
-        labels = batch['label']
-        logits = model(x)
-        valid_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)    
-        valid_loss_values.append(valid_loss)
-
-        predictions = tf.argmax(logits, axis=1)
-        valid_accuracy = tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32))
-        true = tfds.as_numpy(labels)
-        pred = tfds.as_numpy(predictions)
-        test_true = np.concatenate([test_true, true])
-        test_pred = np.concatenate([test_pred, pred])
-        valid_accuracy_values.append(valid_accuracy)
-        
-        
-    train_loss_values_plot.append(np.mean(np.concatenate(train_loss_values)))
-    valid_loss_values_plot.append(np.mean(np.concatenate(valid_loss_values)))
-    train_accuracy_plot.append(np.mean(train_accuracy_values))
-    valid_accuracy_plot.append(np.mean(valid_accuracy_values))
 
 
+images_train, labels_train, images_valid, labels_valid, images_test, labels_test = load_data('fashion_mnist')
+model = model7()
+#model = eval(model_name)(input_dim, nclass)
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+history = model.fit(
+    images_train, labels_train,
+    batch_size=32,
+    epochs=50,
+    verbose=1,
+    validation_data=(images_valid, labels_valid),
+    #callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
+    )
+
+train_accuracy = history.history['accuracy'][-1]
+print('train_acc',train_accuracy)
+val_accuracy = history.history['val_accuracy'][-1]
+print('val_acc',val_accuracy)
+train_loss = history.history['loss'][-1]
+print('train_loss',train_loss)
+val_loss = history.history['val_loss'][-1]
+print('val_loss',val_loss)
 print(model.summary())
-# accuracy
-print("Train Accuracy:", np.mean(train_accuracy_values))
-print("Test Accuracy:", np.mean(valid_accuracy_values))
-fig_acc = show_train_history(train_accuracy_plot, valid_accuracy_plot)
-plt.savefig(os.path.join(os.getcwd(), 'acc.png'))
-fig_loss = show_train_history(train_loss_values_plot,valid_loss_values_plot)
-plt.savefig(os.path.join(os.getcwd(), 'loss.png'))
 
-print(tf.math.confusion_matrix(test_true, test_pred))
+test_loss, test_acc = model.evaluate(images_test,  labels_test, verbose=1)
+print('\nTest accuracy:', test_acc)
+
+fig_acc = show_train_history(history.history['accuracy'], history.history['val_accuracy'])
+plt.savefig(os.path.join('./hw1', 'model8_acc.png'))
+fig_loss = show_train_history(history.history['loss'],history.history['val_loss'])
+plt.savefig(os.path.join('./hw1', 'model8_loss.png'))
+fig_cm = c_m(images_test, model, labels_test)
+plt.savefig(os.path.join('./hw1', 'model8_cm.png'))
+
+print('confidence interval',confidence_interval(images_test, model,labels_test))
