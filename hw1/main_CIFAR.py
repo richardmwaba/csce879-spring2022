@@ -48,7 +48,7 @@ images_train = np.array(images_train).astype('float32') / 255
 images_valid = np.array(images_valid).astype('float32') / 255
 labels_train = np.array(labels_train)
 labels_valid = np.array(labels_valid)
-images_test = np.array(images_test)
+images_test = np.array(images_test).astype('float32') / 255
 labels_test = np.array(labels_test)
 
 
