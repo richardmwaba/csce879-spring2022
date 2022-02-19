@@ -43,13 +43,13 @@ training_histories = {}
 
 
 # Load data and normalize (from [0,255] to [0,1])
-images_train, labels_train, images_valid, labels_valid, images_test, labels_test = load_data('cifar100', DATA_DIR, partition_split)
+images_train, clabels_train, flabels_train, images_valid, clabels_valid, flabels_valid, images_test, clabels_test, flabels_test = load_data('cifar100', DATA_DIR, partition_split)
 images_train = np.array(images_train).astype('float32') / 255
 images_valid = np.array(images_valid).astype('float32') / 255
-labels_train = np.array(labels_train)
-labels_valid = np.array(labels_valid)
 images_test = np.array(images_test).astype('float32') / 255
-labels_test = np.array(labels_test)
+clabels_train, flabels_train = np.array(clabels_train), np.array(flabels_train)
+clabels_valid, flabels_valid = np.array(clabels_valid), np.array(flabels_valid)
+clabels_test, flabels_valid = np.array(clabels_test), np.array(flabels_test)
 
 
 for model_name in model_names:
@@ -62,11 +62,11 @@ for model_name in model_names:
             print("----------------------------------")
             print("Train using model '{}'".format(model_name))
             history = model.fit(
-                images_train, labels_train,
+                images_train, flabels_train,
                 batch_size=batch_size,
                 epochs=epochs,
                 verbose=1,
-                validation_data=(images_valid, labels_valid),
+                validation_data=(images_valid, flabels_valid),
                 callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
             )
 
@@ -95,11 +95,11 @@ with open(trained_models_fh, 'w') as outfile:
 best_model[0].save_weights(os.path.join(model_path, "{}_weights.h5".format(best_model[1])))
 
 # Evaluate model on test data
-final_score = best_model[0].evaluate(images_test, labels_test)
+final_score = best_model[0].evaluate(images_test, flabels_test)
 
 
 # Plot confusion matrix
-confusion_matrix_fig = show_confusion_mat(model=best_model[0], x_valid=images_test, y_valid=labels_test,class_names=range(nclass))
+confusion_matrix_fig = show_confusion_mat(model=best_model[0], x_valid=images_test, y_valid=flabels_test)
 plt.savefig(os.path.join(result_path, 'confusion_matrix.png'))
 
 # Plot the performance results and save
@@ -113,7 +113,7 @@ z = 1.96
 test_acc = final_score[1]
 class_error = 1 - test_acc
 
-confidence_interval = z * tf.math.sqrt((class_error * (1 - class_error)) / labels_test.shape[0])
+confidence_interval = z * tf.math.sqrt((class_error * (1 - class_error)) / flabels_test.shape[0])
 print("------------------------------------------------------------------\n")
 print("The 95% confidence interval is {}".format(confidence_interval))
 

@@ -38,24 +38,27 @@ def data2numpy(train_ds, valid_ds, test_ds):
     Returns:
         _type_ -- _description_
     """
-    images_train, labels_train = [], []
-    images_valid, labels_valid = [], []
-    images_test, labels_test = [], []
+    images_train, clabels_train, flabels_train = [], [], []
+    images_valid, clabels_valid, flabels_valid = [], [], []
+    images_test, clabels_test, flabels_test = [], [], []
     
     for ins in train_ds:
-        labels_train.append(ins['label'].numpy())
+        clabels_train.append(ins['coarse_label'].numpy())
+        flabels_train.append(ins['label'].numpy())
         images_train.append(ins['image'].numpy())
     
     for ins in valid_ds:
-        labels_valid.append(ins['label'].numpy())
+        clabels_valid.append(ins['coarse_label'].numpy())
+        flabels_valid.append(ins['label'].numpy())
         images_valid.append(ins['image'].numpy())
 
     for ins in test_ds:
-        labels_test.append(ins['label'].numpy())
+        clabels_test.append(ins['coarse_label'].numpy())
+        flabels_test.append(ins['label'].numpy())
         images_test.append(ins['image'].numpy())
         
     # lists of images and labels
-    return images_train, labels_train, images_valid, labels_valid, images_test, labels_test
+    return images_train, clabels_train, flabels_train, images_valid, clabels_valid, flabels_valid, images_test, clabels_test, flabels_test
 
 
 def show_train_history(train_history, train, validation):
@@ -75,13 +78,13 @@ def show_train_history(train_history, train, validation):
     plt.show()
     
 
-def show_confusion_mat(model, x_valid, y_valid, class_names):
+def show_confusion_mat(model, x_valid, y_valid, include_values=False):
     """Draw confusion matrix
     Argument:
         model: trained model
         x_valid: np array of validation data
         y_valid: np array of validation label
-        class_names: range(nclass) array
+        includes_values (bool): whether to include values in confusion matrix
     Returns:
         plt figure
     """
@@ -90,8 +93,9 @@ def show_confusion_mat(model, x_valid, y_valid, class_names):
     cm = confusion_matrix(y_valid, y_pred, normalize='true')
     cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
     plt.figure()
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
-    disp.plot(cmap=plt.cm.Blues)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    fig, ax = plt.subplots(figsize=(10,10))
+    disp.plot(include_values=include_values, ax=ax, cmap=plt.cm.Blues)
     plt.show()
 
 ######################################################################
