@@ -37,13 +37,25 @@ def load_data(dataset):
     return images_train, labels_train, images_valid, labels_valid, images_test, labels_test
 
 
-def show_train_history(train, validation):
+def show_acc_history(train, validation):
 
     plt.figure()
     plt.plot(train)
     plt.plot(validation)
     plt.title('Train History')
     plt.ylabel('accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['train', 'validation'], loc='upper left')
+    plt.show()
+    
+    
+def show_loss_history(train, validation):
+
+    plt.figure()
+    plt.plot(train)
+    plt.plot(validation)
+    plt.title('Train History')
+    plt.ylabel('loss')
     plt.xlabel('Epoch')
     plt.legend(['train', 'validation'], loc='upper left')
     plt.show()
