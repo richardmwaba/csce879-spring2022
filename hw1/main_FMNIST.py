@@ -13,7 +13,7 @@ import os
 
 
 images_train, labels_train, images_valid, labels_valid, images_test, labels_test = load_data('fashion_mnist')
-model = model6()
+model = model12()
 #model = eval(model_name)(input_dim, nclass)
 model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 history = model.fit(
@@ -22,7 +22,7 @@ history = model.fit(
     epochs=50,
     verbose=1,
     validation_data=(images_valid, labels_valid),
-    #callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
+    callbacks= [EarlyStopping(monitor='val_accuracy', patience=5)]
     )
 
 train_accuracy = history.history['accuracy'][-1]
@@ -39,11 +39,10 @@ test_loss, test_acc = model.evaluate(images_test,  labels_test, verbose=1)
 print('\nTest accuracy:', test_acc)
 
 fig_acc = show_acc_history(history.history['accuracy'], history.history['val_accuracy'])
-plt.savefig(os.path.join('./hw1', 'model6_acc.png'))
+plt.savefig(os.path.join('./hw1', 'model12_acc.png'))
 fig_loss = show_loss_history(history.history['loss'],history.history['val_loss'])
-plt.savefig(os.path.join('./hw1', 'model6_loss.png'))
+plt.savefig(os.path.join('./hw1', 'model12_loss.png'))
 fig_cm = c_m(images_test, model, labels_test)
-plt.savefig(os.path.join('./hw1', 'model6_cm.png'))
+plt.savefig(os.path.join('./hw1', 'model12_cm.png'))
 
-
-print('confidence interval',confidence_interval(images_test, model,labels_test))
+print('confidence interval',confidence_interval(test_acc))
