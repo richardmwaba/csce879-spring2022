@@ -13,7 +13,7 @@ import os
 
 
 images_train, labels_train, images_valid, labels_valid, images_test, labels_test = load_data('fashion_mnist')
-model = model7()
+model = model6()
 #model = eval(model_name)(input_dim, nclass)
 model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 history = model.fit(
@@ -38,11 +38,12 @@ print(model.summary())
 test_loss, test_acc = model.evaluate(images_test,  labels_test, verbose=1)
 print('\nTest accuracy:', test_acc)
 
-fig_acc = show_train_history(history.history['accuracy'], history.history['val_accuracy'])
-plt.savefig(os.path.join('./hw1', 'model8_acc.png'))
-fig_loss = show_train_history(history.history['loss'],history.history['val_loss'])
-plt.savefig(os.path.join('./hw1', 'model8_loss.png'))
+fig_acc = show_acc_history(history.history['accuracy'], history.history['val_accuracy'])
+plt.savefig(os.path.join('./hw1', 'model6_acc.png'))
+fig_loss = show_loss_history(history.history['loss'],history.history['val_loss'])
+plt.savefig(os.path.join('./hw1', 'model6_loss.png'))
 fig_cm = c_m(images_test, model, labels_test)
-plt.savefig(os.path.join('./hw1', 'model8_cm.png'))
+plt.savefig(os.path.join('./hw1', 'model6_cm.png'))
+
 
 print('confidence interval',confidence_interval(images_test, model,labels_test))
