@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
+import math
 from scipy import stats
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -103,7 +104,7 @@ def confidence_interval(test_acc, labels_test):
     z = 1.96
     class_error = 1 - test_acc
 
-    confidence = z * tf.math.sqrt((class_error * (1 - class_error)) / labels_test.shape[0])
-    ci = [test_acc-confidence, test_acc+confidence]
+    confidence = z * math.sqrt((class_error * (1 - class_error)) / labels_test.shape[0])
+    ci = [class_error-confidence, class_error+confidence]
 
     return ci

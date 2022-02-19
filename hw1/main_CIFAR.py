@@ -76,7 +76,7 @@ for model_name in model_names:
             train_acc = history.history['accuracy'][-1]
 
             # Confindence interval
-            confidence_int = confidence_int = confidence_interval(test_acc=final_acc, labels_test=flabels_valid)
+            confidence_int = confidence_interval(test_acc=final_acc, labels_test=flabels_valid)
 
             # Add model to trained models dictionary
             model_desc= "{}_{}_{}".format(model_name, optimizer, batch_size)
@@ -86,7 +86,7 @@ for model_name in model_names:
                 max_accuracy = final_acc
                 trained_models['best_model'] = [model, train_acc, final_acc, confidence_int, model_desc]
             # Add history to trained histories dictionary
-            training_histories[final_acc] = history
+            training_histories[model_desc] = history
 
             print("Training done!")
 
@@ -116,7 +116,7 @@ print("The 95% confidence interval is {}".format(confidence_int))
 
 # Write to output
 with open(trained_models_fh, 'a') as outfile:
-    outfile.write("\n----------------------------------------------------------------------------------------------------------------")
+    outfile.write("\n----------------------------------------------------------------------------------------------------------------\n")
     outfile.write("The final test accuracy is {} with 95% confidence interval of {}".format(test_acc, confidence_int))
 
 
@@ -128,7 +128,7 @@ confusion_matrix_fig_2 = show_confusion_mat(model=best_model, x_valid=images_tes
 plt.savefig(os.path.join(result_path, 'confusion_matrix_values.png'))
 
 # Plot the performance results and save
-fig_acc = show_train_history(training_histories[max(trained_models)], 'accuracy', 'val_accuracy')
+fig_acc = show_train_history(training_histories[best_model_desc], 'accuracy', 'val_accuracy')
 plt.savefig(os.path.join(result_path, 'acc_plot.png'))
 fig_los = show_train_history(history, 'loss', 'val_loss')
 plt.savefig(os.path.join(result_path, 'loss_plot.png'))
