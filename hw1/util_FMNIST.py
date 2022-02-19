@@ -1,3 +1,4 @@
+import math
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
@@ -60,6 +61,7 @@ def show_loss_history(train, validation):
     plt.legend(['train', 'validation'], loc='upper left')
     plt.show()
     
+    
 def c_m(images_test, model, labels_test):
     
     props = model.predict(images_test)
@@ -71,14 +73,12 @@ def c_m(images_test, model, labels_test):
     plt.show()
     
     
-def confidence_interval(images_test, model,labels_test):
+def confidence_interval(test_acc):
 
-    props = model.predict(images_test)
-    y_pred = np.argmax(props,axis=1)
-    confidence = 0.95
-    squared_errors = (y_pred - labels_test) ** 2
-    ci = np.sqrt(stats.t.interval(confidence, len(squared_errors) - 1,
-                                loc=squared_errors.mean(),
-                                scale=stats.sem(squared_errors)))
-    
+    z = 1.96
+    error = 1 - test_acc
+    cf = z * math.sqrt ((error*test_acc)/10000)
+    ci1 = error - cf
+    ci2 = error + cf
+    ci = [ci1,ci2]
     return ci
