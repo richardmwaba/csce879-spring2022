@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
@@ -24,7 +25,6 @@ def load_data(dataset, DATA_DIR, BATCH_SIZE=64, BUFFER_SIZE=10000):
     test_ds = test_ds.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
     
     return train_ds, test_ds
-
 
 def plot_performance(history, metrics=['accuracy', 'loss']):
     """Plot performance metrics
@@ -89,4 +89,13 @@ def flatten(PrefetchDataset):
         label_arr.extend(PrefetchDataset[i][1].numpy())
         
     return np.array(text_arr), np.array(label_arr)
+
+def confidence_interval(test_acc, test_size):
+    z = 1.96
+    class_error = 1 - test_acc
+
+    confidence = z * math.sqrt((class_error * (1 - class_error)) / test_size)
+    ci = [class_error-confidence, class_error+confidence]
+
+    return ci
         
