@@ -5,25 +5,34 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
-def load_data(dataset, DATA_DIR, BATCH_SIZE=64, BUFFER_SIZE=10000):
+def load_data(dataset, kfold, DATA_DIR, BATCH_SIZE=64, BUFFER_SIZE=10000):
     """Load TensorFlow dataset
     Argument:
         dataset: name of tf dataset e.g., 'imdb_reviews'
-        DATA_DIR: directory for downloading/loading dataset
+        kfold: number of folds for cross-validation (the larger the smaller valid set)
+        DATA_DIR: directory for reading/writing dataset
         BATCH_SIZE: number of training batches
         BUFFER_SIZE: for shuffling data
     Returns:
-        train and test datasets
+        train, valid (both having kfold splits) and test datasets
     """
-
-    ds, info = tfds.load(dataset, data_dir=DATA_DIR, with_info=True, as_supervised=True)
-    train_ds, test_ds = ds['train'], ds['test']
     
-    # shuffle the data for training and create batches of these (text, label) pairs
-    train_ds = train_ds.shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+    val_pct = int(100/kfold)
+    
+    train_ds = tfds.load(dataset, split=[f'train[:{k}%]+train[{k+val_pct}%:]' for k in range(0, 100, val_pct)],
+                         data_dir=DATA_DIR, as_supervised=True)
+    val_ds = tfds.load(dataset, split=[f'train[{k}%:{k+val_pct}%]' for k in range(0, 100, val_pct)],
+                         data_dir=DATA_DIR, as_supervised=True)
+    test_ds = tfds.load(dataset, split='test', data_dir=DATA_DIR, as_supervised=True)
+    
+    # for each fold, shuffle the data for training and create batches of these (text, label) pairs
+    for i in range(kfold):
+        train_ds[i] = train_ds[i].shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+        val_ds[i] = val_ds[i].batch(BATCH_SIZE//kfold).prefetch(tf.data.AUTOTUNE)
+        
     test_ds = test_ds.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
     
-    return train_ds, test_ds
+    return train_ds, val_ds, test_ds
 
 
 def plot_performance(history, metrics=['accuracy', 'loss']):
@@ -89,4 +98,13 @@ def flatten(PrefetchDataset):
         label_arr.extend(PrefetchDataset[i][1].numpy())
         
     return np.array(text_arr), np.array(label_arr)
-        
+
+
+def confidence_interval(test_acc, test_size):
+    z = 1.96
+    class_error = 1 - test_acc
+
+    confidence = z * math.sqrt((class_error * (1 - class_error)) / test_size)
+    ci = [class_error-confidence, class_error+confidence]
+
+    return ci
