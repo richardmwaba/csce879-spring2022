@@ -5,6 +5,7 @@ from keras.layers import TextVectorization, Embedding, Bidirectional, LSTM, GRU,
 
 
 def lstm_rnn(train_ds, **kwargs):
+    dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
     
     encoder = Encoder(train_ds)
     model = Sequential([
@@ -12,7 +13,7 @@ def lstm_rnn(train_ds, **kwargs):
         Embedding(len(encoder.get_vocabulary()), 64, mask_zero=True),
         Bidirectional(tf.keras.layers.LSTM(64,  return_sequences=True)),  # return_sequences needs to be True for stacking subsequent LSTM layers
         Bidirectional(tf.keras.layers.LSTM(32)), # stack 2nd LSTM layer
-        Dense(64, activation='relu'),
+        Dense(dense_units, activation='relu'),
         Dropout(0.5),
         Dense(1)
     ])
@@ -20,6 +21,7 @@ def lstm_rnn(train_ds, **kwargs):
 
 
 def gru_rnn(train_ds, **kwargs):
+    dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
     
     encoder = Encoder(train_ds)
     model = Sequential([
@@ -27,7 +29,7 @@ def gru_rnn(train_ds, **kwargs):
         Embedding(len(encoder.get_vocabulary()), 64, mask_zero=True),
         Bidirectional(tf.keras.layers.GRU(64,  return_sequences=True)),
         Bidirectional(tf.keras.layers.GRU(32)), # stack 2nd GRU layer
-        Dense(64, activation='relu'),
+        Dense(dense_units, activation='relu'),
         Dropout(0.5),
         Dense(1)
     ])
