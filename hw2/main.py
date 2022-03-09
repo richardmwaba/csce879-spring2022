@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import numpy as np
+import time
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ from util import *
 
 
 # Set configurations
-run_name = 'run_toy'
+run_name = 'run_test'
 model_names = ['lstm_rnn', 'gru_rnn']
 dense_units = [64, 128]
 kfold = 5
@@ -42,7 +43,7 @@ for model_name in model_names:
         k_val_acc = []  # all valid acc across k folds
         k_train_acc = [] # all training accuracies across k folds
 
-
+        tic = time.perf_counter() # get current time
         # k-fold cross-validation
         for i in range(kfold):
             print("Starting fold {} for model '{}'".format(i+1, model_name))
@@ -69,7 +70,9 @@ for model_name in model_names:
             k_val_acc.append(fold_val_acc)  # record final valid acc of the fold
             k_train_acc.append(fold_train_acc)
 
-            # == Provide average scores ==
+        toc = time.perf_counter() # get current time
+        # Record training time
+        train_time = f'{toc-tic:.4f} secs'
 
         # Get average metrics
         train_acc = np.mean(k_train_acc)
@@ -77,7 +80,7 @@ for model_name in model_names:
 
         # Add model to trained models dictionary
         model_desc= f"{model_name}-units_{units}"
-        trained_models[model_desc] = [model, train_acc, val_acc, k_val_acc, k_train_acc]
+        trained_models[model_desc] = [model, train_acc, val_acc, k_val_acc, k_train_acc, train_time]
 
         # # Add history to trained histories dictionary
         # training_histories[model_desc] = [k_train_acc, k_val_acc, k_train_loss, k_val_loss]
@@ -95,7 +98,13 @@ best_model_desc = trained_models['best_model'][3]
 trained_models_fh = os.path.join(result_path, 'trained_models.txt')
 with open(trained_models_fh, 'w') as outfile:
     for key, val in trained_models.items():
-        outfile.write(f"{key}\t\t\t{val[1]}\t\t\t{val[2]}\n")
+        if key == 'best_model': 
+            continue
+        outfile.write('*************************************************************************************************\n')
+        outfile.write(f'{key}\n')
+        outfile.write('---------------------------------------------------------------------------------------\n')
+        outfile.write(f"> Training accuracy {val[1]:.4f} Validation accuracy: {val[2]:.4f} Training time: {val[-1]}\n")
+        outfile.write('*************************************************************************************************\n')
 
 # Write models and their kfold results to file
 trained_models_folds_fh = os.path.join(result_path, 'trained_models_folds.txt')
@@ -123,12 +132,12 @@ confidence_int = confidence_interval(test_acc=test_acc, test_size=test_labels.sh
 # Write to output
 with open(trained_models_fh, 'a') as outfile:
     outfile.write("\n----------------------------------------------------------------------------------------------------------------\n")
-    outfile.write("The final test accuracy is {} with 95% confidence interval of {}".format(test_acc, confidence_int))
+    outfile.write(f"The final test accuracy is {test_acc:.4f} with 95% confidence interval of {confidence_int}")
 
 
 # # # Plot performance results and confusion matrix and save
 # fig = plot_performance(training_histories[best_model_desc])
 # plt.savefig(os.path.join(result_path, 'performance_plot.png'))
 
-# cm_fig = plot_confusion_mat(best_model, test_texts, test_labels)
-# plt.savefig(os.path.join(result_path, 'cm_plot.png'))
+cm_fig = plot_confusion_mat(best_model, test_texts, test_labels)
+plt.savefig(os.path.join(result_path, 'cm_plot.png'))

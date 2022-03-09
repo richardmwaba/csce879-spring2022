@@ -102,6 +102,15 @@ def flatten(PrefetchDataset):
 
 
 def confidence_interval(test_acc, test_size):
+    """Calculate confidence interval
+
+    Arguments:
+        test_acc (float) -- prediction accuracy
+        test_size (int) -- size of labels
+
+    Returns:
+        list -- confidence interval
+    """
     z = 1.96
     class_error = 1 - test_acc
 
