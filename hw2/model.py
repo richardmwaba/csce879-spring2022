@@ -8,7 +8,7 @@ from keras.layers import TextVectorization, Embedding, Bidirectional, LSTM, GRU,
 def lstm_rnn(train_ds, **kwargs):
     dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
     
-    encoder = Encoder(train_text)
+    encoder = Encoder(train_ds)
     model = Sequential([
         encoder,
         Embedding(len(encoder.get_vocabulary()), 64, mask_zero=True),
@@ -36,7 +36,7 @@ def gru_rnn(train_ds, **kwargs):
     ])
     return model
 
-def Encoder(train_text, VOCAB_SIZE=5000):
+def Encoder(train_ds, VOCAB_SIZE=5000):
     encoder = TextVectorization(
         max_tokens=VOCAB_SIZE)
     encoder.adapt(train_ds.map(lambda text, label: text))  # map function projects out just the first component 'text'
