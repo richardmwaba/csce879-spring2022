@@ -36,7 +36,6 @@ def gru_rnn(train_ds, **kwargs):
     ])
     return model
 
-
 def Encoder(train_text, VOCAB_SIZE=5000):
     encoder = TextVectorization(
         max_tokens=VOCAB_SIZE)
