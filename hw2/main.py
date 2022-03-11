@@ -18,13 +18,12 @@ from util import *
 
 # Set configurations
 run_name = 'run_test'
-model_names = ['lstm_rnn', 'gru_rnn']
+model_names = ['lstm_attention', 'gru_attention']
 dense_units = [64, 128]
 kfold = 5
-epoch = 10
+epoch = 5
 batch_size = 64
 learning_rates = [0.01, 1e-3, 1e-4]
-num_folds = 5
 DATA_DIR = './tensorflow-datasets/'
 
 # Set path to save performance plots

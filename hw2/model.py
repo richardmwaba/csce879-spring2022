@@ -1,40 +1,8 @@
 from sklearn import preprocessing
 import tensorflow as tf
-import keras
+import numpy as np
 from keras.models import Sequential
 from keras.layers import TextVectorization, Embedding, Bidirectional, LSTM, GRU, Dense, Dropout, Attention, Concatenate
-
-
-def lstm_rnn(train_ds, **kwargs):
-    dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
-    
-    encoder = Encoder(train_ds)
-    model = Sequential([
-        encoder,
-        Embedding(len(encoder.get_vocabulary()), 64, mask_zero=True),
-        Bidirectional(tf.keras.layers.LSTM(64,  return_sequences=True)),  # return_sequences needs to be True for stacking subsequent LSTM layers
-        Bidirectional(tf.keras.layers.LSTM(32)), # stack 2nd LSTM layer
-        Dense(dense_units, activation='relu'),
-        Dropout(0.5),
-        Dense(1)
-    ])
-    return model
-
-
-def gru_rnn(train_ds, **kwargs):
-    dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
-    
-    encoder = Encoder(train_ds)
-    model = Sequential([
-        encoder,
-        Embedding(len(encoder.get_vocabulary()), 64, mask_zero=True),
-        Bidirectional(tf.keras.layers.GRU(64,  return_sequences=True)),
-        Bidirectional(tf.keras.layers.GRU(32)), # stack 2nd GRU layer
-        Dense(dense_units, activation='relu'),
-        Dropout(0.5),
-        Dense(1)
-    ])
-    return model
 
 
 def lstm_attention(train_ds, **kwargs):
@@ -64,14 +32,14 @@ def lstm_attention(train_ds, **kwargs):
     dropout = Dropout(0.5)
     output_layer = tf.keras.layers.Dense(1)
     
-    input = tf.keras.Input(shape=(1,), dtype=tf.string)  # input is string of one review
-    embeddings = embedding_layer(encoder(input))
+    input_x = tf.keras.Input(shape=(1,), dtype=tf.string)  # input is string of one review
+    embeddings = embedding_layer(encoder(input_x))
     query = query_layer(embeddings)
     value = value_layer(embeddings)
     query_value_attention = attention([query, value])
     attended_values = concat([query, query_value_attention])
     logits = output_layer(dropout(dense(rnn(attended_values))))
-    model = tf.keras.Model(input, logits)
+    model = tf.keras.Model(input_x, logits)
     
     return model
 
@@ -103,14 +71,14 @@ def gru_attention(train_ds, **kwargs):
     dropout = Dropout(0.5)
     output_layer = tf.keras.layers.Dense(1)
     
-    input = tf.keras.Input(shape=(1,), dtype=tf.string)  # input is string of one review
-    embeddings = embedding_layer(encoder(input))
+    input_x = tf.keras.Input(shape=(1,), dtype=tf.string)  # input is string of one review
+    embeddings = embedding_layer(encoder(input_x))
     query = query_layer(embeddings)
     value = value_layer(embeddings)
     query_value_attention = attention([query, value])
     attended_values = concat([query, query_value_attention])
     logits = output_layer(dropout(dense(rnn(attended_values))))
-    model = tf.keras.Model(input, logits)
+    model = tf.keras.Model(input_x, logits)
     
     return model
 
