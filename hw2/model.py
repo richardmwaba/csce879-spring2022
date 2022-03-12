@@ -5,6 +5,37 @@ from keras.models import Sequential
 from keras.layers import TextVectorization, Embedding, Bidirectional, LSTM, GRU, Dense, Dropout, Attention, Concatenate
 
 
+def lstm_rnn(train_ds, **kwargs):
+    dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
+    
+    encoder = Encoder(train_ds)
+    model = Sequential([
+        encoder,
+        Embedding(len(encoder.get_vocabulary()), 64, mask_zero=True),
+        Bidirectional(tf.keras.layers.LSTM(64,  return_sequences=True)),  # return_sequences needs to be True for stacking subsequent LSTM layers
+        Bidirectional(tf.keras.layers.LSTM(32)), # stack 2nd LSTM layer
+        Dense(dense_units, activation='relu'),
+        Dropout(0.5),
+        Dense(1)
+    ])
+    return model
+
+
+def gru_rnn(train_ds, **kwargs):
+    dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
+    
+    encoder = Encoder(train_ds)
+    model = Sequential([
+        encoder,
+        Embedding(len(encoder.get_vocabulary()), 64, mask_zero=True),
+        Bidirectional(tf.keras.layers.GRU(64,  return_sequences=True)),
+        Bidirectional(tf.keras.layers.GRU(32)), # stack 2nd GRU layer
+        Dense(dense_units, activation='relu'),
+        Dropout(0.5),
+        Dense(1)
+    ])
+    return model
+
 def lstm_attention(train_ds, **kwargs):
     dense_units = kwargs['dense_units'] if 'dense_units' in kwargs else 64
     
@@ -29,7 +60,7 @@ def lstm_attention(train_ds, **kwargs):
     cells = [tf.keras.layers.LSTMCell(256), tf.keras.layers.LSTMCell(64)]
     rnn = tf.keras.layers.RNN(cells)
     dense = Dense(dense_units, activation='relu')
-    dropout = Dropout(0.5)
+    dropout = Dropout(0.1)
     output_layer = tf.keras.layers.Dense(1)
     
     input_x = tf.keras.Input(shape=(1,), dtype=tf.string)  # input is string of one review
@@ -68,7 +99,7 @@ def gru_attention(train_ds, **kwargs):
     cells = [tf.keras.layers.GRUCell(256), tf.keras.layers.GRUCell(64)]
     rnn = tf.keras.layers.RNN(cells)
     dense = Dense(dense_units, activation='relu')
-    dropout = Dropout(0.5)
+    dropout = Dropout(0.1)
     output_layer = tf.keras.layers.Dense(1)
     
     input_x = tf.keras.Input(shape=(1,), dtype=tf.string)  # input is string of one review

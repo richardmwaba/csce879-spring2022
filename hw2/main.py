@@ -18,12 +18,12 @@ from util import *
 
 # Set configurations
 run_name = 'run_test'
-model_names = ['lstm_attention', 'gru_attention']
-dense_units = [64, 128]
+model_names = ['lstm_attention', 'gru_attention'] #['lstm_attention', 'gru_attention']
+dense_units = [32, 64] #64
 kfold = 5
-epoch = 5
+epoch = 3
 batch_size = 64
-learning_rates = [0.01, 1e-3, 1e-4]
+learning_rate = 1e-4 #[0.01, 1e-3, 1e-4]
 DATA_DIR = './tensorflow-datasets/'
 
 # Set path to save performance plots
@@ -40,57 +40,60 @@ training_histories = {}
 max_accuracy = float(-np.inf)
 
 for model_name in model_names:
-    for lr in learning_rates:
-        for units in dense_units:
-            k_val_acc = []  # all valid acc across k folds
-            k_train_acc = [] # all training accuracies across k folds
+    for units in dense_units:
+        k_val_acc = []  # all valid acc across k folds
+        k_train_acc = [] # all training accuracies across k folds
 
-            tic = time.perf_counter() # get current time
-            # k-fold cross-validation
-            for i in range(kfold):
-                print("Starting fold {} for model '{}'".format(i+1, model_name))
+        tic = time.perf_counter() # get current time
+        # k-fold cross-validation
+        for i in range(kfold):
+            print("Starting fold {} for model '{}-{}'".format(i+1, model_name, units))
+            tfic = time.perf_counter() # get current time
 
-                # model init
-                model = eval(model_name)(train_ds[i], dense_units=units)
+            # model init
+            model = eval(model_name)(train_ds[i], dense_units=units)
 
-                model.compile(loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-                            optimizer=Adam(lr),
-                            metrics=['accuracy'])
+            model.compile(loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                        optimizer=Adam(),
+                        metrics=['accuracy'])
 
-                # model training
-                history = model.fit(train_ds[i],
-                                    epochs=epoch,
-                                    validation_data=valid_ds[i],
-                                    validation_steps=5)  # When an epoch ends, validation generator will yield validation_steps batches
+            # model training
+            history = model.fit(train_ds[i],
+                                epochs=epoch,
+                                validation_data=valid_ds[i],
+                                validation_steps=5)  # When an epoch ends, validation generator will yield validation_steps batches
 
-                print('Fold {} finished!'.format(i+1))
+            print('Fold {} finished!'.format(i+1))
 
-                # Save fold metrics
-                fold_train_acc = history.history['accuracy'][-1]
-                fold_val_acc = history.history['val_accuracy'][-1]
+            # Save fold metrics
+            fold_train_acc = history.history['accuracy'][-1]
+            fold_val_acc = history.history['val_accuracy'][-1]
 
-                k_val_acc.append(fold_val_acc)  # record final valid acc of the fold
-                k_train_acc.append(fold_train_acc)
+            k_val_acc.append(fold_val_acc)  # record final valid acc of the fold
+            k_train_acc.append(fold_train_acc)
 
-            toc = time.perf_counter() # get current time
-            # Record training time
-            train_time = f'{toc-tic:.4f} secs'
+            tfoc = time.perf_counter() # get current time
+            print(f"Training fold {i} took {tfoc-tfic:.4f} secs")
 
-            # Get average metrics
-            train_acc = np.mean(k_train_acc)
-            val_acc = np.mean(k_val_acc)
+        toc = time.perf_counter() # get current time
+        # Record training time
+        train_time = f'{toc-tic:.4f} secs'
 
-            # Add model to trained models dictionary
-            model_desc= f"{model_name}-units_{units}_lr{lr}"
-            trained_models[model_desc] = [model, train_acc, val_acc, k_val_acc, k_train_acc, train_time]
+        # Get average metrics
+        train_acc = np.mean(k_train_acc)
+        val_acc = np.mean(k_val_acc)
 
-            # # Add history to trained histories dictionary
-            # training_histories[model_desc] = [k_train_acc, k_val_acc, k_train_loss, k_val_loss]
+        # Add model to trained models dictionary
+        model_desc= f"{model_name}-units_{units}"
+        trained_models[model_desc] = [model, train_acc, val_acc, k_val_acc, k_train_acc, train_time]
 
-            # Add best model
-            if val_acc > max_accuracy:
-                max_accuracy = val_acc
-                trained_models['best_model'] = [model, train_acc, val_acc, model_desc]
+        # # Add history to trained histories dictionary
+        # training_histories[model_desc] = [k_train_acc, k_val_acc, k_train_loss, k_val_loss]
+
+        # Add best model
+        if val_acc > max_accuracy:
+            max_accuracy = val_acc
+            trained_models['best_model'] = [model, train_acc, val_acc, model_desc]
 
 # Get model with maximum validation accuracy
 best_model = trained_models['best_model'][0]
