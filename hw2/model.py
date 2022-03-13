@@ -57,7 +57,7 @@ def lstm_attention(train_ds, **kwargs):
     attention = tf.keras.layers.Attention()
     concat = tf.keras.layers.Concatenate()
     
-    cells = [tf.keras.layers.LSTMCell(256), tf.keras.layers.LSTMCell(64)]
+    cells = [tf.keras.layers.LSTMCell(32), tf.keras.layers.LSTMCell(8)]
     rnn = tf.keras.layers.RNN(cells)
     dense = Dense(dense_units, activation='relu')
     dropout = Dropout(0.1)
@@ -96,7 +96,7 @@ def gru_attention(train_ds, **kwargs):
     attention = tf.keras.layers.Attention()
     concat = tf.keras.layers.Concatenate()
     
-    cells = [tf.keras.layers.GRUCell(256), tf.keras.layers.GRUCell(64)]
+    cells = [tf.keras.layers.GRUCell(32), tf.keras.layers.GRUCell(8)]
     rnn = tf.keras.layers.RNN(cells)
     dense = Dense(dense_units, activation='relu')
     dropout = Dropout(0.1)
