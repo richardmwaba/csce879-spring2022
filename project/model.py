@@ -1,18 +1,27 @@
-from typing import Any
+#******************************************************************************************************************************#
+# This code is adopted from https://https://github.com/bnsreenu/python_for_image_processing_APEER                              #
+#******************************************************************************************************************************#
+
+
+
+# Building Unet by dividing encoder and decoder into blocks
+
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, concatenate, Conv2DTranspose, BatchNormalization, Dropout, Lambda
-from tensorflow.keras.optimizers import Adam
+from keras.optimizers import Adam
 from keras.layers import Activation, MaxPool2D, Concatenate
 
 
-def conv_block(input: Any, num_filters: int):
+def conv_block(input, num_filters):
+    x = Conv2D(num_filters, 3, padding="same")(input)
+    x = BatchNormalization()(x)   #Not in the original network. 
+    x = Activation("relu")(x)
 
-    conv1 = Conv2D(filters=num_filters, kernel_size=3, padding="same", activation="relu")(input)
-    batchnorm1 = BatchNormalization()(conv1)    
-    conv2 = Conv2D(filters=num_filters, kernel_size=3, padding="same", activation="relu")(batchnorm1)
-    batchnorm2 = BatchNormalization()(conv2)  
+    x = Conv2D(num_filters, 3, padding="same")(x)
+    x = BatchNormalization()(x)  #Not in the original network
+    x = Activation("relu")(x)
 
-    return batchnorm2
+    return x
 
 #Encoder block: Conv block followed by maxpooling
 
