@@ -1,135 +1,59 @@
-# Credit goes to https://github.com/zhixuhao/unet/blob/master/model.py. I took this script and made minor modifications to accomedate for my needs. Credit goes to that github script,
-# user name is zhixuhao, https://github.com/zhixuhao
+from typing import Any
+from keras.models import Model
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, concatenate, Conv2DTranspose, BatchNormalization, Dropout, Lambda
+from tensorflow.keras.optimizers import Adam
+from keras.layers import Activation, MaxPool2D, Concatenate
 
-import numpy as np 
-import tensorflow as tf
-import matplotlib.pyplot as plt
-from keras.models import Input, Model, load_model
-from tensorflow.keras.layers import BatchNormalization, Conv2D, Dropout, MaxPooling2D, UpSampling2D, concatenate
-from keras.optimizers import Adam
-from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, ReduceLROnPlateau, EarlyStopping
 
-class UNet:
+def conv_block(input: Any, num_filters: int):
 
-    def __init__(self):
-        self.model = None
-        self.loaded_model = None
-        self.model_loaded = False
+    conv1 = Conv2D(filters=num_filters, kernel_size=3, padding="same", activation="relu")(input)
+    batchnorm1 = BatchNormalization()(conv1)    
+    conv2 = Conv2D(filters=num_filters, kernel_size=3, padding="same", activation="relu")(batchnorm1)
+    batchnorm2 = BatchNormalization()(conv2)  
 
-    def load_saved_model(self, filepath):
-        self.loaded_model = load_model(filepath=filepath)
-        self.model_loaded = True
-        return self.loaded_model
+    return batchnorm2
 
-    def create_model(self, input_size, loss, metrics):
-        inputs = Input(shape=input_size)
-        conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', input_shape=input_size)(inputs)
-        conv1 = BatchNormalization()(conv1)
-        conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
-        conv1 = BatchNormalization()(conv1)
-        pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
-        conv2 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
-        conv2 = BatchNormalization()(conv2)
-        conv2 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv2)
-        conv2 = BatchNormalization()(conv2)
-        pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
-        conv3 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool2)
-        conv3 = BatchNormalization()(conv3)
-        conv3 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
-        conv3 = BatchNormalization()(conv3)
-        pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
-        conv4 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool3)
-        conv4 = BatchNormalization()(conv4)
-        conv4 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv4)
-        conv4 = BatchNormalization()(conv4)
-        drop4 = Dropout(0.5)(conv4)
-        pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
+#Encoder block: Conv block followed by maxpooling
 
-        conv5 = Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
-        conv5 = BatchNormalization()(conv5)
-        conv5 = Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
-        conv5 = BatchNormalization()(conv5)
-        drop5 = Dropout(0.5)(conv5)
 
-        up6 = Conv2D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop5))
-        merge6 = concatenate([drop4,up6], axis = 3)
-        conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
-        conv6 = BatchNormalization()(conv6)
-        conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
-        conv6 = BatchNormalization()(conv6)
+def encoder_block(input, num_filters):
+    x = conv_block(input, num_filters)
+    p = MaxPool2D((2, 2))(x)
+    return x, p   
 
-        up7 = Conv2D(256, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv6))
-        merge7 = concatenate([conv3,up7], axis = 3)
-        conv7 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7)
-        conv7 = BatchNormalization()(conv7)
-        conv7 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7)
-        conv7 = BatchNormalization()(conv7)
+#Decoder block
+#skip features gets input from encoder for concatenation
 
-        up8 = Conv2D(128, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv7))
-        merge8 = concatenate([conv2,up8], axis = 3)
-        conv8 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
-        conv8 = BatchNormalization()(conv8)
-        conv8 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
-        conv8 = BatchNormalization()(conv8)
+def decoder_block(input, skip_features, num_filters):
+    x = Conv2DTranspose(num_filters, (2, 2), strides=2, padding="same")(input)
+    x = Concatenate()([x, skip_features])
+    x = conv_block(x, num_filters)
+    return x
 
-        up9 = Conv2D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv8))
-        merge9 = concatenate([conv1,up9], axis = 3)
-        conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
-        conv9 = BatchNormalization()(conv9)
-        conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-        conv9 = BatchNormalization()(conv9)
-        conv9 = Conv2D(2, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-        conv9 = BatchNormalization()(conv9)
-        conv10 = Conv2D(1, 1, activation = 'sigmoid')(conv9)
-        
-        self.model = Model(inputs = inputs, outputs = conv10)
-        self.model.compile(optimizer=Adam(lr=1e-3), loss=loss, metrics =[metrics])
+#Build Unet using the blocks
+def build_unet(input_shape, n_classes):
+    inputs = Input(input_shape)
 
-        return self.model
+    s1, p1 = encoder_block(inputs, 64)
+    s2, p2 = encoder_block(p1, 128)
+    s3, p3 = encoder_block(p2, 256)
+    s4, p4 = encoder_block(p3, 512)
 
-    def model_summary(self):
-        return self.model.summary()
-        
-    def train_model(self, filepath, X_train, y_train, X_val, y_val, epochs, display_callback=None):
-        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,
-                                                                        save_weights_only=True,
-                                                                        monitor='val_loss',
-                                                                        mode='max',
-                                                                        save_best_only=True)
-        reducelr = ReduceLROnPlateau(monitor="val_loss",
-                                     factor=0.2,
-                                     patience=3,
-                                     min_lr=1e-7,
-                                     verbose=1)
+    b1 = conv_block(p4, 1024) #Bridge
 
-        earlystopping = EarlyStopping(monitor='val_accuracy', patience=5)
-                                                    
-            
-        if self.model_loaded:
-            self.loaded_model.fit(x=X_train, y=y_train, validation_data=(X_val,y_val), epochs=epochs, callbacks=[model_checkpoint_callback, reducelr, earlystopping], verbose=1)      
-        else:
-            self.model.fit(x=X_train, y=y_train, validation_data=(X_val,y_val), epochs=epochs, callbacks=[model_checkpoint_callback, reducelr, earlystopping], verbose=1)           
+    d1 = decoder_block(b1, s4, 512)
+    d2 = decoder_block(d1, s3, 256)
+    d3 = decoder_block(d2, s2, 128)
+    d4 = decoder_block(d3, s1, 64)
 
-    def test_predict(self, X_test, y_test, idx, model_filepath=None):
-        if self.model_loaded:
-            fig = plt.figure(figsize=(10,10))
-            plt.subplot(3, 3, 1)
-            plt.imshow(np.array(X_test[idx]), cmap="gray")
-            plt.subplot(3, 3, 2)
-            plt.imshow(np.squeeze(self.loaded_model.predict(np.array(X_test[idx]).reshape(1,512,512,3))),cmap="gray")
-            plt.subplot(3, 3, 3)
-            plt.imshow(np.array(y_test[idx]), cmap="gray")
-        else:
-            fig = plt.figure(figsize=(10,10))
-            plt.subplot(3, 3, 1)
-            plt.imshow(np.array(X_test[idx]), cmap="gray")
-            plt.subplot(3, 3, 2)
-            plt.imshow(np.squeeze(self.loaded_model.predict(np.array(X_test[idx]).reshape(1,512,512,3))),cmap="gray")
-            plt.subplot(3, 3, 3)
-            plt.imshow(np.array(y_test[idx]), cmap="gray")
+    if n_classes == 1:  #Binary
+      activation = 'sigmoid'
+    else:
+      activation = 'softmax'
 
-    def save_model(self, file_dest):
-        if self.model_loaded:
-            self.loaded_model.save(file_dest, save_format='tf')
-        else:
-            self.model.save(file_dest, save_format='tf')
+    outputs = Conv2D(n_classes, 1, padding="same", activation=activation)(d4)  #Change the activation based on n_classes
+    print(activation)
+
+    model = Model(inputs, outputs, name="U-Net")
+    return model
