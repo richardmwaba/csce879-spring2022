@@ -1,6 +1,7 @@
-#*****************************************************************************************************************#
-# This code is adopted from https://github.com/hq-jiang/instance-segmentation-with-discriminative-loss-tensorflow #
-#*****************************************************************************************************************#
+#******************************************************************************************************************#
+# Credit goes to https://github.com/hq-jiang/instance-segmentation-with-discriminative-loss-tensorflow. We adopted #
+# their code and modified it according to our needs                                                                   #
+#******************************************************************************************************************#
 import os
 import json
 import glob
