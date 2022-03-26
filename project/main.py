@@ -29,7 +29,7 @@ if not os.path.isdir(result_path):
 image_directory = os.path.join(HOME_DIR, 'original_image')
 mask_directory = os.path.join(HOME_DIR, 'label_image')    
 
-if not (os.path.isdir(image_directory) and os.path.isdir(mask_directory))
+if not (os.path.isdir(image_directory) and os.path.isdir(mask_directory)):
     process(HOME_DIR, 'label_data_0313.json')
     process(HOME_DIR, 'label_data_0531.json')
     process(HOME_DIR, 'label_data_0601.json')

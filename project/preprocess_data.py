@@ -105,7 +105,7 @@ def draw_single_line(img: np.array, lane: list, height: list) -> None:
     pts = np.array([pts])
     cv2.polylines(img, pts, False,255, thickness=15)
 
-def save_label_images(output_dir: str, data: list, instancewise: bool =True) -> None:
+def save_label_images(output_dir: str, data: list, instancewise: bool =False) -> None:
     """Save labeled images
 
     Arguments:
@@ -146,7 +146,8 @@ if __name__=='__main__':
     if not os.path.isdir(labelsdir):
         os.mkdir(labelsdir)
 
-    json_string = 'label_data_*.json'
+    # json_string = 'label_data_*.json'
+    json_string = 'test_label.json'
     data = read_json(args.srcdir, json_string)
     img_paths = read_image_strings(data, args.srcdir)
     save_input_images(imagesdir, img_paths)
