@@ -89,9 +89,9 @@ def draw_lines(img: np.array, lanes: list, height: list, instancewise: bool = Fa
         pts = [[x,y] for x, y in zip(lane, height) if (x!=-2 and y!=-2)]
         pts = np.array([pts])
         if not instancewise:
-            cv2.polylines(img, pts, False,255, thickness=7)
+            cv2.polylines(img, pts, False,255, thickness=4)
         else:
-            cv2.polylines(img, pts, False,50*i+20, thickness=7)
+            cv2.polylines(img, pts, False,50*i+20, thickness=4)
 
 def draw_single_line(img: np.array, lane: list, height: list) -> None:
     """Draw single lane line
