@@ -64,6 +64,6 @@ for i in range(n_epochs):
     fid_record.append(fid)
     if (i+1) > patience:
         recent_fids = fid_record[-patience-1:]
-        if all(recent_fids[i] <= recent_fids[i + 1] for i in range(len(recent_fids) - 1)):  # early stopping
+        if all(recent_fids[k] <= recent_fids[k+1] for k in range(len(recent_fids) - 1)):  # early stopping
             summarize_performance(i, g_model, d_model, train_ds, latent_dim, resultpath)
             break
