@@ -11,7 +11,6 @@ from scipy.linalg import sqrtm
 import os
 
 
-# load and prepare cifar10 training images
 def load_real_data():
     """Load and prepare cifar10 training images
     Argument:
@@ -126,7 +125,6 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, resultpa
     g_model.save(os.path.join(resultpath,filename))
     
     
-# scale an array of images to a new size
 def scale_images(images, new_shape):
     """scale an array of images to a new size
     Argument:
@@ -143,7 +141,6 @@ def scale_images(images, new_shape):
     return np.asarray(images_list)
 
 
-# calculate frechet inception distance (FID) for evaluation
 def calculate_fid(model, images1, images2):
     """calculate frechet inception distance (FID) for evaluation
     Argument:

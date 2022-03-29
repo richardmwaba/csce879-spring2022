@@ -67,5 +67,3 @@ for i in range(n_epochs):
         if all(recent_fids[i] >= recent_fids[i + 1] for i in range(len(recent_fids) - 1)):  # early stopping
             summarize_performance(i, g_model, d_model, train_ds, latent_dim, resultpath)
             break
-
-    
