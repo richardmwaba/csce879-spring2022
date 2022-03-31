@@ -27,7 +27,7 @@ def load_real_data():
     return X_train, X_test
 
 
-def generate_real_data(dataset, n_samples):
+def generate_real_data(dataset, n_samples, random = True):
     """select a random subsample of real images
     Argument:
         dataset: name of dataset loaded from load_real_data()
@@ -36,9 +36,12 @@ def generate_real_data(dataset, n_samples):
         n_samples random real images and its corresponding labels
     """
     # choose random instances
-    ix = randint(0, dataset.shape[0], n_samples)
-    # retrieve selected images
-    X = dataset[ix]
+    if random:
+        ix = randint(0, dataset.shape[0], n_samples)
+        # retrieve selected images
+        X = dataset[ix]
+    else:
+        X = dataset
     # generate 'real' class labels (all 1)
     y = np.ones((n_samples, 1))
     return X, y
@@ -83,16 +86,19 @@ def save_plot(examples, epoch, resultpath, n=10):
     """
     # scale from [-1,1] to [0,1]
     examples = (examples + 1) / 2.0
+
     # plot images
-    for i in range(n):
+    for i in range(n * n):
         # turn off axis
         plt.axis('off')
+        # subplot
+        plt.subplot(n, n, 1 + i)
         # plot raw pixel data
-        plt.imshow(examples[i])
+        plt.imshow(examples[i, :, :])
         # save plot to file
-        filename = 'generated_plot_e%03d_%02d.png' % (epoch+1, i+1)
-        plt.savefig(os.path.join(resultpath,filename))
-        plt.close()
+    filename = 'generated_plot_e%03d_%02d.png' % (epoch+1, i+1)
+    plt.savefig(os.path.join(resultpath,filename))
+    plt.close()
 
 
 def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, resultpath, n_samples=150):
@@ -123,6 +129,8 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, resultpa
     # save the generator model tile file
     filename = 'generator_model_%03d.h5' % (epoch+1)
     g_model.save(os.path.join(resultpath,filename))
+
+    return acc_real, acc_fake
     
     
 def scale_images(images, new_shape):
