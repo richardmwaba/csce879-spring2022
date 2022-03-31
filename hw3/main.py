@@ -14,7 +14,7 @@ batch_size = 256 # 128
 latent_dim = 100  # size of the latent space (50, 100, 200, 300)
 n_epochs_save = 10  # save model every x epochs
 n_samples = 1000  # size of the two fake and real image collections for evaluation (1000)
-patience = 5  # for early stopping
+patience = 10  # for early stopping
 
 # Set path to save performance plots
 resultpath = './result/{0}'.format(run_name)
@@ -36,6 +36,8 @@ train_ds, test_ds = load_real_data()  # shape (n_sample, width, height, channels
 bat_per_epo = int(train_ds.shape[0] / batch_size)
 half_batch = int(batch_size / 2)  # first half for real, second half for fake samples
 fid_record = []
+best_fid = np.inf
+temper = 0
 with open(resultfile, 'w') as outfile:
     for i in range(n_epochs):
         for j in range(bat_per_epo):  # enumerate batches over the training set
@@ -69,10 +71,13 @@ with open(resultfile, 'w') as outfile:
             outfile.write('----------------------------------------------------------------------------------\n')
         
         fid_record.append(fid)
-        if (i+1) > patience:
-            recent_fids = fid_record[-patience-1:]
-            if all(recent_fids[k] <= recent_fids[k+1] for k in range(len(recent_fids) - 1)):  # early stopping
-                acc_real, acc_fake = summarize_performance(i, g_model, d_model, train_ds, latent_dim, resultpath)
-                outfile.write('> Accuracy at %d afte patience --- real: %.0f%%, fake: %.0f%%\n' % (i+1, acc_real*100, acc_fake*100))
-                outfile.write('----------------------------------------------------------------------------------\n')
-                break
+        if fid < best_fid:
+            best_fid = fid
+            temper = 0  # reset temper if there is improvement
+        else: temper+=1  # increment temper if no improvement
+            
+        if temper > patience:  # early stopping
+            acc_real, acc_fake = summarize_performance(i, g_model, d_model, train_ds, latent_dim, resultpath)
+            outfile.write('> Accuracy at %d afte patience --- real: %.0f%%, fake: %.0f%%\n' % (i+1, acc_real*100, acc_fake*100))
+            outfile.write('----------------------------------------------------------------------------------\n')
+            break
