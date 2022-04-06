@@ -10,7 +10,9 @@ from model_MNIST import *
 from util_MNIST import *
 import os
 
-
+models=[deepmodel,widemodel]
+bool regularizer_on
+learning_rate=[0.01,0.25]
 
 images_train, labels_train, images_valid, labels_valid, images_test, labels_test = load_data('fashion_mnist')
 model = model12()
