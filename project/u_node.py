@@ -121,7 +121,7 @@ class UNode(Model):
         super(UNode, self).__init__(**kwargs, dynamic=dynamic)
 
         self.nf = num_filters
-        self.input_dim = input_dim
+        # self.input_dim = input_dim
         self.augment_dim = augment_dim
         self.output_dim = output_dim
         self.time_dependent = time_dependent
@@ -129,30 +129,35 @@ class UNode(Model):
         self.solver = solver
 #         self.output_kernel = out_kernel_size
         self.output_strides = out_strides
+        self.input_dim = input_dim
 
-#         self.inputs = tf.keras.layers.Input()
+        self.input_layer = Conv2D(filters=num_filters, kernel_size=(1, 1), padding='same', input_shape=input_dim)
         self.norm_range = tf.keras.layers.Lambda(lambda x: x / 255)
 
         #Contraction path
         ode_down1 = Conv2dODEFunc(num_filters=num_filters, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_down1 = ODEBlock(odefunc=ode_down1, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
-        self.conv_down1_2 = Conv2D(filters=num_filters*2, kernel_size=(1, 1), padding='valid')
+        self.conv_down1_2 = Conv2D(filters=num_filters*2, kernel_size=(1, 1), padding='same', activation='relu')
+        self.maxpool1 = MaxPooling2D(pool_size=(2, 2))
 
         ode_down2 = Conv2dODEFunc(num_filters=num_filters*2, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_down2 = ODEBlock(odefunc=ode_down2, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
-        self.conv_down2_3 = Conv2D(filters=num_filters*4, kernel_size=(1, 1), padding='valid')
+        self.conv_down2_3 = Conv2D(filters=num_filters*4, kernel_size=(1, 1), padding='same', activation='relu')
+        self.maxpool2 = MaxPooling2D(pool_size=(2, 2))
 
         ode_down3 = Conv2dODEFunc(num_filters=num_filters*4, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_down3 = ODEBlock(odefunc=ode_down3, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
-        self.conv_down3_4 = Conv2D(filters=num_filters*8, kernel_size=(1, 1), padding='valid')
+        self.conv_down3_4 = Conv2D(filters=num_filters*8, kernel_size=(1, 1), padding='same', activation='relu')
+        self.maxpool3 = MaxPooling2D(pool_size=(2, 2))
 
         ode_down4 = Conv2dODEFunc(num_filters=num_filters*8, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_down4 = ODEBlock(odefunc=ode_down4, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
-        self.conv_down4_embed = Conv2D(filters=num_filters*16, kernel_size=(1, 1), padding='valid')
+        self.conv_down4_embed = Conv2D(filters=num_filters*16, kernel_size=(1, 1), padding='same', activation='relu')
+        self.maxpool4 = MaxPooling2D(pool_size=(2, 2))
 
         ode_embed = Conv2dODEFunc(num_filters=num_filters*16, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
@@ -160,25 +165,25 @@ class UNode(Model):
 
         #Expansive path
         self.transpose1 = Conv2DTranspose(filters=num_filters*8, kernel_size=(2, 2), strides=(2, 2), padding='same')
-        self.conv_up_embed_1 = Conv2D(filters=num_filters*8, kernel_size=(1, 1), padding='same')
+        self.conv_up_embed_1 = Conv2D(filters=num_filters*8, kernel_size=(1, 1), padding='same', activation='relu')
         ode_up1 = Conv2dODEFunc(num_filters=num_filters*8, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_up1 = ODEBlock(odefunc=ode_up1, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
 
         self.transpose2 = Conv2DTranspose(filters=num_filters*4, kernel_size=(2, 2), strides=(2, 2), padding='same')
-        self.conv_up1_2 = Conv2D(filters=num_filters*4, kernel_size=(1, 1), padding='same')
+        self.conv_up1_2 = Conv2D(filters=num_filters*4, kernel_size=(1, 1), padding='same', activation='relu')
         ode_up2 = Conv2dODEFunc(num_filters=num_filters*4, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_up2 = ODEBlock(odefunc=ode_up2, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
 
         self.transpose3 = Conv2DTranspose(filters=num_filters*2, kernel_size=(2, 2), strides=(2, 2), padding='same')
-        self.conv_up2_3 = Conv2D(filters=num_filters*2, kernel_size=(1, 1), padding='same')
+        self.conv_up2_3 = Conv2D(filters=num_filters*2, kernel_size=(1, 1), padding='same', activation='relu')
         ode_up3 = Conv2dODEFunc(num_filters=num_filters*2, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_up3 = ODEBlock(odefunc=ode_up3, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
 
         self.transpose4 = Conv2DTranspose(filters=num_filters, kernel_size=(2, 2), strides=(2, 2), padding='same')
-        self.conv_up3_4 = Conv2D(filters=num_filters, kernel_size=(1, 1), padding='same')
+        self.conv_up3_4 = Conv2D(filters=num_filters, kernel_size=(1, 1), padding='same', activation='relu')
         ode_up4 = Conv2dODEFunc(num_filters=num_filters, augment_dim=augment_dim, time_dependent=time_dependent,
                                     non_linearity=non_linearity)
         self.odeblock_up4 = ODEBlock(odefunc=ode_up4, is_conv=True, tol=tol, adjoint=adjoint, solver=solver)
@@ -188,29 +193,31 @@ class UNode(Model):
 
     def call(self, inputs, training=None, return_features=False):
         # features = self.odeblock(x, training=training)
-#         x = self.inputs(self.input_shape)
-        x = self.norm_range(inputs)
+
+        x_cast = tf.cast(inputs, dtype=tf.float32)
+        inps = self.input_layer(x_cast)
+        x = self.norm_range(inps)
         
         # Contraction path
         features1 = self.odeblock_down1(x)
         x = self.conv_down1_2(features1)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
-        x = Dropout(0.1)(x)
+        x = self.maxpool1(x)
+        # x = Dropout(0.1)(x)
 
         features2 = self.odeblock_down2(x)
         x = self.conv_down2_3(features2)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
-        x = Dropout(0.1)(x)
+        x = self.maxpool2(x)
+        # x = Dropout(0.1)(x)
 
         features3 = self.odeblock_down3(x)
         x = self.conv_down3_4(features3)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
-        x = Dropout(0.2)(x)
+        x = self.maxpool3(x)
+        # x = Dropout(0.2)(x)
 
         features4 = self.odeblock_down4(x)
         x = self.conv_down4_embed(features4)
-        x = MaxPooling2D(pool_size=(2, 2))(x)
-        x = Dropout(0.2)(x)
+        x = self.maxpool4(x)
+        # x = Dropout(0.2)(x)
 
         x = self.odeblock_embending(x)
 
