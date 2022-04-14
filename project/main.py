@@ -130,8 +130,8 @@ for i in range(100):
     _, filename = os.path.split(test_paths[i])
     test_img = X_test[i]
     ground_truth=Y_test[i]
-    # test_img_input=np.expand_dims(test_img, 0)
-    prediction = (model.predict(test_img) > 0.5).astype(np.uint8)
+    test_img_input=np.expand_dims(test_img, 0)
+    prediction = (model.predict(test_img_input)[0,:,:,0] > 0.5).astype(np.uint8)
     res = cv2.resize(prediction, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
     plt.imshow(res, cmap='gray')
     plt.imsave(os.path.join(pred_path, filename), res, cmap='gray')

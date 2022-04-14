@@ -40,8 +40,8 @@ class Conv2dODEFunc(Model):
         else:
             self.norm1 = BatchNormalization()
             self.conv1 = tf.keras.layers.Conv2D(self.num_filters, kernel_size=(3, 3), strides=(1, 1), padding='same')
-            self.norm2 = BatchNormalization()
-            self.conv2 = tf.keras.layers.Conv2D(self.num_filters, kernel_size=(3, 3), strides=(1, 1), padding='same')
+#             self.norm2 = BatchNormalization()
+#             self.conv2 = tf.keras.layers.Conv2D(self.num_filters, kernel_size=(3, 3), strides=(1, 1), padding='same')
 
         if non_linearity == 'relu':
             self.non_linearity = tf.keras.layers.ReLU()
@@ -79,12 +79,11 @@ class Conv2dODEFunc(Model):
             out = self.norm1(x)
             out = self.conv1(out)
             out = self.non_linearity(out)
-            out = self.norm2(out)
-            out = self.conv2(out)
-            out = self.non_linearity(out)
+#             out = self.norm2(out)
+#             out = self.conv2(out)
+#             out = self.non_linearity(out)
 
         return out
-
 class UNode(Model):
     """Creates a U-Net with an ODEBlock and a convolutional ODEFunc followed by a Linear
     layer, therefore a U-Node
@@ -193,10 +192,11 @@ class UNode(Model):
 
     def call(self, inputs, training=None, return_features=False):
         # features = self.odeblock(x, training=training)
-
-        x_cast = tf.cast(inputs, dtype=tf.float32)
+        
+        x_cast = tf.cast(inputs, dtype=tf.float64)
         inps = self.input_layer(x_cast)
         x = self.norm_range(inps)
+        
         
         # Contraction path
         features1 = self.odeblock_down1(x)
