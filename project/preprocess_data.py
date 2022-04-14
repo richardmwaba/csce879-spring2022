@@ -1,6 +1,6 @@
 #******************************************************************************************************************#
 # Credit goes to https://github.com/hq-jiang/instance-segmentation-with-discriminative-loss-tensorflow. We adopted #
-# their code and modified it according to our needs                                                                   #
+# their code and modified it according to our needs                                                                #
 #******************************************************************************************************************#
 import os
 import json
@@ -9,6 +9,9 @@ import argparse
 from tqdm import tqdm
 import cv2
 import numpy as np
+
+from skimage.io import imread
+from skimage.transform import resize
 
 def read_json(data_dir: str, json_string: str) -> list:
     """Return list of clips from all paths
@@ -62,7 +65,7 @@ def read_image_strings(data: list, input_dir: str) -> list:
     
     return img_paths
 
-def save_input_images(output_dir: str, img_paths: list) -> None:
+def save_input_images(output_dir: str, img_paths: list, resize_shape: tuple = None) -> None:
     """Save all images in one directory
 
     Arguments:
@@ -71,6 +74,8 @@ def save_input_images(output_dir: str, img_paths: list) -> None:
     """
     for i, path in tqdm(enumerate(img_paths), total=len(img_paths)):
         img = cv2.imread(path)
+        if resize_shape:
+            img = cv2.resize(img, resize_shape)
         output_path = os.path.join(output_dir, '{}.png'.format(str(i).zfill(4)))
         cv2.imwrite(output_path, img)
 
@@ -105,7 +110,7 @@ def draw_single_line(img: np.array, lane: list, height: list) -> None:
     pts = np.array([pts])
     cv2.polylines(img, pts, False,255, thickness=15)
 
-def save_label_images(output_dir: str, data: list, instancewise: bool =False) -> None:
+def save_label_images(output_dir: str, data: list, instancewise: bool =False, resize_shape: tuple = None) -> None:
     """Save labeled images
 
     Arguments:
@@ -123,6 +128,8 @@ def save_label_images(output_dir: str, data: list, instancewise: bool =False) ->
             lanes = data[i][j]['lanes']
             height = data[i][j]['h_samples']
             draw_lines(img, lanes, height, instancewise)
+            if resize_shape:
+                img = cv2.resize(img, resize_shape)
             output_path = os.path.join(output_dir, '{}.png'.format(str(counter).zfill(4)))
             cv2.imwrite(output_path, img)
             counter += 1
