@@ -114,25 +114,25 @@ def mask2json():  # Convert binary prediction masks to json (NOT WORKING)
     outfile.close()
         
         
-def plot_performance(history, metrics=['accuracy', 'loss']):
+def plot_performance(results, metrics=['accuracy', 'loss']):
     """Plot performance metrics
     Argument:
-        history: training history from Keras's model.fit()
+        results: training results from Keras's model.fit()
         metrics: performance metrics for trained model
     Returns:
         plt figure
     """
     plt.figure(figsize=(16, 8))
     plt.subplot(1, 2, 1)
-    plt.plot(history.history[metrics[0]])
-    plt.plot(history.history['val_'+metrics[0]], '')
+    plt.plot(results.history[metrics[0]])
+    plt.plot(results.history['val_'+metrics[0]], '')
     plt.xlabel("Epochs")
     plt.ylabel(metrics[0])
     plt.legend([metrics[0], 'val_'+metrics[0]])
     plt.ylim(None, 1)
     plt.subplot(1, 2, 2)
-    plt.plot(history.history[metrics[1]])
-    plt.plot(history.history['val_'+metrics[1]], '')
+    plt.plot(results.history[metrics[1]])
+    plt.plot(results.history['val_'+metrics[1]], '')
     plt.xlabel("Epochs")
     plt.ylabel(metrics[1])
     plt.legend([metrics[1], 'val_'+metrics[1]])

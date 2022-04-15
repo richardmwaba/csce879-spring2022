@@ -1,97 +1,172 @@
 from tensorflow.keras.utils import normalize
+import numpy as np
 import os
 import sys
 import cv2
+import glob
+import json
+
 from PIL import Image
-import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.optimizers import Adam
-import glob
-import json
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from sklearn.preprocessing import LabelEncoder
+from skimage.io import imread
+from skimage.transform import resize
+from tqdm import tqdm 
 
-from model import *
+from model import UNet
 from util import *
 
 
-HOME_DIR = '/common/appliedmath/nthach17/TUSimple/'  # path to TuSimple dataset
+HOME_DIR = os.getcwd()  # path to TuSimple dataset
 run_name = 'run_toy'
 
 # Specify paths to store performance plots and prediction masks
-pred_path = os.path.join(HOME_DIR,'predicted_image')
-if not os.path.isdir(pred_path):
-    os.makedirs(pred_path, exist_ok=True)
-result_path = './result/{0}'.format(run_name)
+result_path = os.path.join(HOME_DIR, f'result/{run_name}')
 if not os.path.isdir(result_path):
     os.makedirs(result_path, exist_ok=True)
 
-image_directory = os.path.join(HOME_DIR, 'original_image')
-mask_directory = os.path.join(HOME_DIR, 'label_image')    
+pred_path = os.path.join(result_path,'predicted_images')
+if not os.path.isdir(pred_path):
+    os.makedirs(pred_path, exist_ok=True)
 
-if not (os.path.isdir(image_directory) and os.path.isdir(mask_directory)):
-    process(HOME_DIR, 'label_data_0313.json')
-    process(HOME_DIR, 'label_data_0531.json')
-    process(HOME_DIR, 'label_data_0601.json')
+saved_model_path = os.path.join(result_path, 'saved_model')
+if not os.path.isdir(saved_model_path):
+    os.makedirs(saved_model_path, exist_ok=True)
 
-num_images = len(os.listdir(image_directory))
+seed = 42
+np.random.seed = seed
 
-image_names = glob.glob(image_directory + '/*.png')
-image_names.sort()
-image_names_subset = image_names[0:num_images]
-images = [cv2.imread(img, 0) for img in image_names_subset]
-image_dataset = np.array(images)
-image_dataset = np.expand_dims(image_dataset, axis = 3)
+IMG_WIDTH = 256
+IMG_HEIGHT = 256
+IMG_CHANNELS = 3
+NUM_IMAGES = 1000
+EPOCHS = 100
+NUM_FILTERS = 32
+NUM_CLASSES = 6
 
-mask_names = glob.glob(mask_directory + '/*.png')
-mask_names.sort()
-mask_names_subset = mask_names[0:num_images]
-masks = [cv2.imread(mask, 0) for mask in mask_names_subset]
-mask_dataset = np.array(masks)
-mask_dataset = np.expand_dims(mask_dataset,axis = 3)
+TRAIN_PATH = 'data/train_set/'
+TEST_PATH = 'data/test_set/'
 
-print("Image data shape is: ", image_dataset.shape)
-print("Mask data shape is: ", mask_dataset.shape)
-print("Max pixel value in image is: ", image_dataset.max())
-print("Labels in the mask are : ", np.unique(mask_dataset))
+train_paths = glob.glob(TRAIN_PATH + 'labelled/images/*.png')
+train_paths.sort()
+# train_paths = train_paths[:NUM_IMAGES]
+train_labels = glob.glob(TRAIN_PATH + 'labelled/labels/*.png')
+train_labels.sort()
+test_paths = glob.glob(TEST_PATH + 'labelled/images/*.png')
+test_paths.sort()
+# test_paths = test_paths[:NUM_IMAGES]
+test_labels = glob.glob(TEST_PATH + 'labelled/labels/*.png')
+test_labels.sort()
+# test_labels = test_labels[:NUM_IMAGES]
 
-#Normalize images
-image_dataset = image_dataset /255.  #Can also normalize or scale using MinMax scaler
-#Do not normalize masks, just rescale to 0 to 1.
-mask_dataset = mask_dataset /255.  #PIxel values will be 0 or 1
 
-X_train, X_test, y_train, y_test, idx_train, idx_test = train_test_split(image_dataset,
-                                                                         mask_dataset,
-                                                                         range(len(image_dataset)),
-                                                                         test_size = 0.20, random_state = 42)
+# Train data
+# X_train = np.zeros((len(train_paths), IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
+# Y_train = np.zeros((len(train_labels), IMG_HEIGHT, IMG_WIDTH), dtype=np.uint8)
+print('Resizing training images and masks')
 
-IMG_HEIGHT = image_dataset.shape[1]
-IMG_WIDTH  = image_dataset.shape[2]
-IMG_CHANNELS = image_dataset.shape[3]
+X_train = []
+for n, path in tqdm(enumerate(train_paths), total=len(train_paths)):   
+    img = imread(path)[:,:,:IMG_CHANNELS]  
+    # img = resize(img, (IMG_HEIGHT, IMG_WIDTH), mode='constant', preserve_range=True)
+    img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH), interpolation = cv2.INTER_NEAREST)
+    X_train.append(img)
+X_train = np.array(X_train)
 
-input_shape = (IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
+Y_train = []
+for n, path in tqdm(enumerate(train_labels), total=len(train_labels)):
+    mask = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    mask = cv2.resize(mask, (IMG_HEIGHT, IMG_WIDTH), interpolation = cv2.INTER_NEAREST)  
+        
+    Y_train.append(mask) 
+Y_train = np.array(Y_train)
 
-model = build_unet(input_shape, n_classes=1)
-model.compile(optimizer=Adam(learning_rate = 1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+# Encode train labels
+labelencoder = LabelEncoder()
+n, h, w = Y_train.shape
+Y_train_reshaped = Y_train.reshape(-1,1)
+Y_train_encoded = labelencoder.fit_transform(Y_train_reshaped)
+Y_train = Y_train_encoded.reshape(n, h, w)
+Y_train = np.expand_dims(Y_train, axis=3)
 
-history = model.fit(X_train, y_train, 
-                    batch_size = 16, 
-                    verbose=1, 
-                    epochs=10, 
-                    validation_data=(X_test, y_test),              
-                    shuffle=False)
+# Convert to categorical
+Y_train_cat = to_categorical(Y_train, num_classes=NUM_CLASSES)
+
+
+print(f"Train data type is {X_train.dtype}")
+
+# Test data
+# X_test = np.zeros((len(test_paths), IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
+# Y_test = np.zeros((len(test_labels), IMG_HEIGHT, IMG_WIDTH), dtype=np.uint8)
+
+X_test = []
+for n, path in tqdm(enumerate(test_paths), total=len(test_paths)):
+    img = imread(path)[:,:,:IMG_CHANNELS]
+    # img = resize(img, (IMG_HEIGHT, IMG_WIDTH), mode='constant', preserve_range=True)
+    img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH), interpolation = cv2.INTER_NEAREST)
+    X_test.append(img)
+X_test = np.array(X_test)
+
+Y_test = []
+for n, path in tqdm(enumerate(test_labels), total=len(test_labels)):
+    mask = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    mask = cv2.resize(mask, (IMG_HEIGHT, IMG_WIDTH), interpolation = cv2.INTER_NEAREST)
+        
+    Y_test.append(mask)
+Y_test = np.array(Y_test) 
+
+# Encode test labels
+labelencoder = LabelEncoder()
+n, h, w = Y_test.shape
+Y_test_reshaped = Y_test.reshape(-1,1)
+Y_test_encoded = labelencoder.fit_transform(Y_test_reshaped)
+Y_test = Y_test_encoded.reshape(n, h, w)
+Y_test = np.expand_dims(Y_test, axis=3)
+
+# Convert to categorical
+Y_test_cat = to_categorical(Y_test, num_classes=NUM_CLASSES)
+
+
+print(f"Test data type is {X_test.dtype}")
+
+
+# Print data shapes
+print("Train data shape is: ", X_train.shape)
+print("Train label shape is: ", Y_train.shape)
+print("Max pixel value in image is: ", X_train.max())
+print("Labels in the mask are : ", np.unique(Y_train))
+
+# Input dimension
+input_dim = (IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
+
+
+# Callbacks
+checkpointer = ModelCheckpoint(f'{saved_model_path}/model_for_tusimple.h5', verbose=1, save_best_only=True,
+                save_weights_only=True)
+callbacks = [EarlyStopping(patience=2, monitor='val_loss'), checkpointer]
+
+model = UNet(input_shape=input_dim, filters=NUM_FILTERS, num_classes=NUM_CLASSES)
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+results = model.fit(X_train, Y_train_cat, validation_split=0.2, batch_size=32, epochs=EPOCHS, callbacks=callbacks)
 
 #plot the training and validation accuracy at each epoch
-fig = plot_performance(history)
+fig = plot_performance(results)
 plt.savefig(os.path.join(result_path, 'performance_plot.png'))
 
 #save prediction masks
 for i in range(len(X_test)):
-    path, filename = os.path.split(image_names[idx_test[i]])
+    _, filename = os.path.split(test_paths[i])
     test_img = X_test[i]
-    ground_truth=y_test[i]
-    test_img_input=np.expand_dims(test_img, 0)
-    prediction = (model.predict(test_img_input)[0,:,:,0] > 0.5).astype(np.uint8)
-    res = cv2.resize(prediction, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
-    plt.imshow(res, cmap='gray')
-    plt.imsave(os.path.join(pred_path,filename), res, cmap='gray')
+    img = test_img.reshape(1, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
+    ground_truth=Y_test_cat[i]
+    prediction = model.predict(img)
+    predicted_img=np.argmax(prediction, axis=3)[0,:,:]
+    # res = cv2.resize(prediction, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
+    plt.imshow(predicted_img, cmap='gray')
+    plt.imsave(os.path.join(pred_path, filename), predicted_img)
