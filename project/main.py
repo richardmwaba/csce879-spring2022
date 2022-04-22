@@ -1,14 +1,14 @@
-from tensorflow.keras.utils import normalize
 import numpy as np
 import os
 import sys
 import cv2
 import glob
-import json
+import random
 
 from PIL import Image
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.utils import normalize
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -25,12 +25,17 @@ HOME_DIR = os.getcwd()  # path to TuSimple dataset
 run_name = 'run_toy'
 
 # Specify paths to store performance plots and prediction masks
-pred_path = os.path.join(HOME_DIR,'predicted_images')
-if not os.path.isdir(pred_path):
-    os.makedirs(pred_path, exist_ok=True)
-result_path = './result/{0}'.format(run_name)
+result_path = os.path.join(HOME_DIR, f'result/{run_name}')
 if not os.path.isdir(result_path):
     os.makedirs(result_path, exist_ok=True)
+
+pred_path = os.path.join(result_path,'predicted_images')
+if not os.path.isdir(pred_path):
+    os.makedirs(pred_path, exist_ok=True)
+
+saved_model_path = os.path.join(result_path, 'saved_model')
+if not os.path.isdir(saved_model_path):
+    os.makedirs(saved_model_path, exist_ok=True)
 
 seed = 42
 np.random.seed = seed
@@ -40,21 +45,23 @@ IMG_HEIGHT = 256
 IMG_CHANNELS = 3
 NUM_IMAGES = 100
 EPOCHS = 20
-NUM_FILTERS = 4
+NUM_FILTERS = 8
 
 TRAIN_PATH = 'data/train_set/'
 TEST_PATH = 'data/test_set/'
 
 train_paths = glob.glob(TRAIN_PATH + 'labelled/images/*.png')
 train_paths.sort()
-train_paths = train_paths[:NUM_IMAGES]
+# train_paths = train_paths[:NUM_IMAGES]
 train_labels = glob.glob(TRAIN_PATH + 'labelled/labels/*.png')
 train_labels.sort()
+# train_labels = train_labels[:NUM_IMAGES]
 test_paths = glob.glob(TEST_PATH + 'labelled/images/*.png')
 test_paths.sort()
-test_paths = test_paths[:NUM_IMAGES]
+# test_paths = test_paths[:NUM_IMAGES]
 test_labels = glob.glob(TEST_PATH + 'labelled/labels/*.png')
 test_labels.sort()
+# test_labels = test_labels[:NUM_IMAGES]
 
 
 # Train data
@@ -74,14 +81,11 @@ for n, path in tqdm(enumerate(train_labels), total=len(train_labels)):
         
     Y_train[n] = mask 
 
-# X_train = np.array([imread(path)[:,:,:IMG_CHANNELS] for path in train_paths])
-# Y_train = np.array([np.expand_dims(imread(path), axis=-1) for path in train_labels])
-
 print(f"Train data type is {X_train.dtype}")
 
 # Test data
 X_test = np.zeros((len(test_paths), IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
-Y_test = np.zeros((len(test_labels), IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.bool)
+Y_test = np.zeros((len(test_labels), IMG_HEIGHT, IMG_WIDTH, 1), dtype=np.bool)
 
 for n, path in tqdm(enumerate(test_paths), total=len(test_paths)):
     img = imread(path)[:,:,:IMG_CHANNELS]
@@ -94,9 +98,6 @@ for n, path in tqdm(enumerate(test_labels), total=len(test_labels)):
                                   preserve_range=True), axis=-1)  
         
     Y_test[n] = mask 
-
-# X_test = np.array([imread(path)[:,:,:IMG_CHANNELS] for path in test_paths])
-# Y_test = np.array([np.expand_dims(imread(path), axis=-1) for path in test_labels])
 
 print(f"Test data type is {X_test.dtype}")
 
@@ -112,26 +113,29 @@ input_dim = (IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 
 
 # Callbacks
-checkpointer = ModelCheckpoint('saved_model/model_for_tusimple.h5', verbose=1, save_best_only=True,
-                save_weights_only=True)
-callbacks = [EarlyStopping(patience=2, monitor='val_loss'), checkpointer]
+# checkpointer = ModelCheckpoint(f'{saved_model_path}/unode.tf', verbose=1, save_best_only=True)
+callbacks = [EarlyStopping(patience=2, monitor='val_loss')]
 
-model = UNode(num_filters=NUM_FILTERS, input_dim=input_dim, solver='dopri8')
+model = UNode(num_filters=NUM_FILTERS, input_dim=input_dim, non_linearity='lrelu', solver='adams')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-results = model.fit(X_train, Y_train, validation_split=0.2, batch_size=2, epochs=EPOCHS, callbacks=callbacks)
+results = model.fit(X_train, Y_train, validation_split=0.2, batch_size=8, epochs=EPOCHS, callbacks=callbacks)
+
+# Save model weights
+model.save_weights(f'{saved_model_path}/unode.tf')
 
 #plot the training and validation accuracy at each epoch
 fig = plot_performance(results)
 plt.savefig(os.path.join(result_path, 'performance_plot.png'))
 
 #save prediction masks
-for i in range(100):
+rand_images = random.sample(range(X_test.shape[0]), 200)
+for i in rand_images:
     _, filename = os.path.split(test_paths[i])
     test_img = X_test[i]
     ground_truth=Y_test[i]
     test_img_input=np.expand_dims(test_img, 0)
-    prediction = (model.predict(test_img_input)[0,:,:,0] > 0.5).astype(np.uint8)
+    prediction = (model.predict(test_img_input)[0,:,:,0] > 0.15).astype(np.uint8)
     res = cv2.resize(prediction, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
     plt.imshow(res, cmap='gray')
     plt.imsave(os.path.join(pred_path, filename), res, cmap='gray')
