@@ -1,14 +1,15 @@
-from tensorflow.keras.utils import normalize
 import numpy as np
 import os
 import sys
 import cv2
 import glob
 import json
+import random
 
 from PIL import Image
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.utils import normalize
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
@@ -20,10 +21,11 @@ from tqdm import tqdm
 
 from model import UNet
 from util import *
+from u_node import UNode
 
 
 HOME_DIR = os.getcwd()  # path to TuSimple dataset
-run_name = 'run_toy'
+run_name = 'main_run'
 
 # Specify paths to store performance plots and prediction masks
 result_path = os.path.join(HOME_DIR, f'result/{run_name}')
@@ -46,7 +48,7 @@ IMG_HEIGHT = 256
 IMG_CHANNELS = 3
 NUM_IMAGES = 1000
 EPOCHS = 100
-NUM_FILTERS = 32
+NUM_FILTERS = 8
 NUM_CLASSES = 6
 
 TRAIN_PATH = 'data/train_set/'
@@ -57,6 +59,7 @@ train_paths.sort()
 # train_paths = train_paths[:NUM_IMAGES]
 train_labels = glob.glob(TRAIN_PATH + 'labelled/labels/*.png')
 train_labels.sort()
+# train_labels = train_labels[:NUM_IMAGES]
 test_paths = glob.glob(TEST_PATH + 'labelled/images/*.png')
 test_paths.sort()
 # test_paths = test_paths[:NUM_IMAGES]
@@ -66,14 +69,11 @@ test_labels.sort()
 
 
 # Train data
-# X_train = np.zeros((len(train_paths), IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
-# Y_train = np.zeros((len(train_labels), IMG_HEIGHT, IMG_WIDTH), dtype=np.uint8)
 print('Resizing training images and masks')
 
 X_train = []
 for n, path in tqdm(enumerate(train_paths), total=len(train_paths)):   
     img = imread(path)[:,:,:IMG_CHANNELS]  
-    # img = resize(img, (IMG_HEIGHT, IMG_WIDTH), mode='constant', preserve_range=True)
     img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH), interpolation = cv2.INTER_NEAREST)
     X_train.append(img)
 X_train = np.array(X_train)
@@ -100,14 +100,10 @@ Y_train_cat = to_categorical(Y_train, num_classes=NUM_CLASSES)
 
 print(f"Train data type is {X_train.dtype}")
 
-# Test data
-# X_test = np.zeros((len(test_paths), IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
-# Y_test = np.zeros((len(test_labels), IMG_HEIGHT, IMG_WIDTH), dtype=np.uint8)
-
+# test data
 X_test = []
 for n, path in tqdm(enumerate(test_paths), total=len(test_paths)):
     img = imread(path)[:,:,:IMG_CHANNELS]
-    # img = resize(img, (IMG_HEIGHT, IMG_WIDTH), mode='constant', preserve_range=True)
     img = cv2.resize(img, (IMG_HEIGHT, IMG_WIDTH), interpolation = cv2.INTER_NEAREST)
     X_test.append(img)
 X_test = np.array(X_test)
@@ -146,27 +142,29 @@ input_dim = (IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 
 
 # Callbacks
-checkpointer = ModelCheckpoint(f'{saved_model_path}/model_for_tusimple.h5', verbose=1, save_best_only=True,
-                save_weights_only=True)
-callbacks = [EarlyStopping(patience=2, monitor='val_loss'), checkpointer]
+callbacks = [EarlyStopping(patience=5, monitor='val_loss')]
 
-model = UNet(input_shape=input_dim, filters=NUM_FILTERS, num_classes=NUM_CLASSES)
+model = UNode(num_filters=NUM_FILTERS, input_dim=input_dim, output_dim=NUM_CLASSES, non_linearity='lrelu', solver='adams')
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-results = model.fit(X_train, Y_train_cat, validation_split=0.2, batch_size=32, epochs=EPOCHS, callbacks=callbacks)
+results = model.fit(X_train, Y_train_cat, validation_split=0.2, batch_size=8, epochs=EPOCHS, callbacks=callbacks)
+
+# Save model weights
+model.save_weights(f'{saved_model_path}/unode.tf')
 
 #plot the training and validation accuracy at each epoch
 fig = plot_performance(results)
 plt.savefig(os.path.join(result_path, 'performance_plot.png'))
 
 #save prediction masks
-for i in range(len(X_test)):
+rand_images = random.sample(range(X_test.shape[0]), 200)
+for i in rand_images:
     _, filename = os.path.split(test_paths[i])
     test_img = X_test[i]
     img = test_img.reshape(1, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
     ground_truth=Y_test_cat[i]
     prediction = model.predict(img)
-    predicted_img=np.argmax(prediction, axis=3)[0,:,:]
-    # res = cv2.resize(prediction, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
-    plt.imshow(predicted_img, cmap='gray')
-    plt.imsave(os.path.join(pred_path, filename), predicted_img)
+    predicted_img = prediction[0,:,:,1]#np.argmax(prediction, axis=3)[0,:,:]
+    res = cv2.resize(predicted_img, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
+    plt.imshow(res, cmap='gray')
+    plt.imsave(os.path.join(pred_path, filename), res, cmap='gray')
