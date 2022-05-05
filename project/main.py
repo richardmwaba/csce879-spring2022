@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import re
 import sys
 import cv2
 import glob
@@ -43,10 +44,10 @@ if not os.path.isdir(saved_model_path):
 seed = 42
 np.random.seed = seed
 
-IMG_WIDTH = 256
-IMG_HEIGHT = 256
+IMG_WIDTH = 128 #256
+IMG_HEIGHT = 128 #256
 IMG_CHANNELS = 3
-NUM_IMAGES = 1000
+NUM_IMAGES = 150
 EPOCHS = 100
 NUM_FILTERS = 8
 NUM_CLASSES = 6
@@ -62,10 +63,10 @@ train_labels.sort()
 # train_labels = train_labels[:NUM_IMAGES]
 test_paths = glob.glob(TEST_PATH + 'labelled/images/*.png')
 test_paths.sort()
-# test_paths = test_paths[:NUM_IMAGES]
+test_paths = test_paths[:NUM_IMAGES]
 test_labels = glob.glob(TEST_PATH + 'labelled/labels/*.png')
 test_labels.sort()
-# test_labels = test_labels[:NUM_IMAGES]
+test_labels = test_labels[:NUM_IMAGES]
 
 
 # Train data
@@ -147,7 +148,7 @@ callbacks = [EarlyStopping(patience=5, monitor='val_loss')]
 model = UNode(num_filters=NUM_FILTERS, input_dim=input_dim, output_dim=NUM_CLASSES, non_linearity='lrelu', solver='adams')
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-results = model.fit(X_train, Y_train_cat, validation_split=0.2, batch_size=8, epochs=EPOCHS, callbacks=callbacks)
+results = model.fit(X_train, Y_train_cat, validation_split=0.2, batch_size=16, epochs=EPOCHS, callbacks=callbacks)
 
 # Save model weights
 model.save_weights(f'{saved_model_path}/unode.tf')
@@ -159,12 +160,20 @@ plt.savefig(os.path.join(result_path, 'performance_plot.png'))
 #save prediction masks
 rand_images = random.sample(range(X_test.shape[0]), 200)
 for i in rand_images:
-    _, filename = os.path.split(test_paths[i])
+    _, filename_ext = os.path.split(test_paths[i])
+    filename = re.split('\.', filename_ext)[0]
+    pred_img_path = os.path.join(pred_path, filename)
+
+    if not os.path.isdir(pred_img_path):
+        os.makedirs(pred_img_path, exist_ok=True)
+    
     test_img = X_test[i]
     img = test_img.reshape(1, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
     ground_truth=Y_test_cat[i]
     prediction = model.predict(img)
-    predicted_img = prediction[0,:,:,1]#np.argmax(prediction, axis=3)[0,:,:]
+    for j in range(6):
+        lane_img = cv2.resize(prediction[0,:,:,j], dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
+        plt.imsave(os.path.join(pred_img_path, f"{filename}_{j}.png"), lane_img, cmap='gray')
+    predicted_img = (np.argmax(prediction, axis=3)[0,:,:]).astype('uint8')
     res = cv2.resize(predicted_img, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
-    plt.imshow(res, cmap='gray')
-    plt.imsave(os.path.join(pred_path, filename), res, cmap='gray')
+    plt.imsave(os.path.join(pred_img_path, f"{filename}_all_lanes.png"), res, cmap='gray')

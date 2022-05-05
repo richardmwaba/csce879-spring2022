@@ -100,6 +100,7 @@ class Conv2dODEFunc(Model):
             out = self.non_linearity(out)
 
         return out
+        
 class UNode(Model):
     """Creates a U-Net with an ODEBlock and a convolutional ODEFunc, therefore a U-Node
     Parameters
