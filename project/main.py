@@ -20,7 +20,7 @@ from skimage.io import imread
 from skimage.transform import resize
 from tqdm import tqdm 
 
-from model import UNet
+from u_net import UNet
 from util import *
 from u_node import UNode
 
@@ -145,6 +145,7 @@ input_dim = (IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 # Callbacks
 callbacks = [EarlyStopping(patience=5, monitor='val_loss')]
 
+# model = UNet(input_shape=input_dim, filters=NUM_FILTERS, num_classes=NUM_CLASSES)
 model = UNode(num_filters=NUM_FILTERS, input_dim=input_dim, output_dim=NUM_CLASSES, non_linearity='lrelu', solver='adams')
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
